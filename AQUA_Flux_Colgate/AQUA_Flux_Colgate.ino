@@ -198,7 +198,7 @@ void loop()
   // -----------------------------------------------------------------------------
 #if USE_ACTUATOR
   // Open or close the chamber with the linear actuator, if time
-  bubbleTrapControl();
+  bubbleTrap();
   // Watchdog.reset();
 #endif
 

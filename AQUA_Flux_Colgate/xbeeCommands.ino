@@ -1,5 +1,8 @@
 void xbeeCommands()
 {
+    return;
+
+    // TODO - Refactor this mess
     if (XBee.available())
     {
         char c = XBee.read();

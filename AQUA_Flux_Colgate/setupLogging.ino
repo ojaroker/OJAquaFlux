@@ -24,7 +24,7 @@ void setupLogging(void)
 #if USE_DATALOGGER
 
 #if DEBUG
-  LOG_STREAM.println(F("DEBUG - RTC enabled"));
+  LOG_STREAM.println(F("DEBUG - Data Logging and RTC enabled"));
 #endif
   // Connect to RTC
   //  #ifndef ESP8266 //    -------------------OJ COMMENTED THIS OUT
@@ -65,15 +65,6 @@ void setupLogging(void)
   // (6) reference circuit output (mV), (7) relative humidity (%), (8) air temperature inside chamber (C), (9) AQUA-Flux ID
   logfile.println("millis, stampunix, datetime, K30_CO2, CH4smV, Vbat, SHT_RH, SHT_temp, AQUA_Flux1");
   LOG_STREAM.println("millis, stampunix, datetime, K30_CO2, CH4smV, Vbat, SHT_RH, SHT_temp, AQUA_Flux1");
-
-#else
-#if DEBUG
-  LOG_STREAM.println(F("DEBUG - RTC disabled"));
-#endif
-
-#if DEBUG
-  LOG_STREAM.println(F("DEBUG - SD card logging enabled"));
-#endif
 
   // Initialize the SD card
   Serial.print("Initializing SD card...");
@@ -116,6 +107,7 @@ void setupLogging(void)
 #else
 #if DEBUG
   LOG_STREAM.println(F("DEBUG - SD card logging disabled"));
+  LOG_STREAM.println(F("DEBUG - RTC disabled"));
 #endif
 #endif
 }
