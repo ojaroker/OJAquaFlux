@@ -14,6 +14,7 @@ unsigned long close = -3000000; // 15 minutes closed (milliseconds) (50 min = 30
 // }
 
 // Define linear actuator functions
+#if USE_ACTUATOR
 void extendActuator()
 {
     actuator.writeMicroseconds(1850); // give the actuator a 2ms pulse to fully extend (1000us = 1ms), recommended to not reach full 2ms
@@ -23,9 +24,10 @@ void retractActuator()
 {
     actuator.writeMicroseconds(1000); // 1ms pulse to fully retract, adjust the retraction time to compress the chamber gasket on the floating base
 }
-
+#endif
 void bubbleTrap()
 {
+#if USE_ACTUATOR
     if (millis() - open >= 59.9 * 60 * 1000UL) // Change first number to minutes closed + minutes open - 0.1
     {
         open = millis();
@@ -91,4 +93,5 @@ void bubbleTrap()
     //  delay(5000); // vent/open for 5 seconds
     //  solenoidOff();
     // }
+#endif
 }
