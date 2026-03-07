@@ -61,11 +61,6 @@ void setupLogging(void)
 
   // int countdownMS = Watchdog.enable(8000); // enable watchdog with timer of 8 seconds (max for Arduino Uno) - if the Arduino halts for more than 8 seconds, the watchdog will restart the sketch
 
-  // List of data products: (1) milliseconds since Arduino was powered, (2) unique Unix stamp, (3) date and time, (4) [CO2] (ppm), (5) CH4 sensor output (mV),
-  // (6) reference circuit output (mV), (7) relative humidity (%), (8) air temperature inside chamber (C), (9) AQUA-Flux ID
-  logfile.println("millis, stampunix, datetime, K30_CO2, CH4smV, Vbat, SHT_RH, SHT_temp, AQUA_Flux1");
-  LOG_STREAM.println("millis, stampunix, datetime, K30_CO2, CH4smV, Vbat, SHT_RH, SHT_temp, AQUA_Flux1");
-
   // Initialize the SD card
   Serial.print("Initializing SD card...");
   XBee.print("Initializing SD card...");
@@ -104,10 +99,15 @@ void setupLogging(void)
   XBee.print("Logging to: ");
   Serial.println(filename);
   XBee.println(filename);
+
+  // List of data products: (1) milliseconds since Arduino was powered, (2) unique Unix stamp, (3) date and time, (4) [CO2] (ppm), (5) CH4 sensor output (mV),
+  // (6) reference circuit output (mV), (7) relative humidity (%), (8) air temperature inside chamber (C), (9) AQUA-Flux ID
+  logfile.println("millis, stampunix, datetime, K30_CO2, CH4smV, Vbat, SHT_RH, SHT_temp, AQUA_Flux1");
 #else
 #if DEBUG
   LOG_STREAM.println(F("DEBUG - SD card logging disabled"));
   LOG_STREAM.println(F("DEBUG - RTC disabled"));
 #endif
 #endif
+  LOG_STREAM.println("millis, stampunix, datetime, K30_CO2, CH4smV, Vbat, SHT_RH, SHT_temp, AQUA_Flux1");
 }
