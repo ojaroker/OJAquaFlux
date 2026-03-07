@@ -1,3 +1,7 @@
+// TODO
+// BUG: log file will overwrite itself
+// Use timestams for filenames instead
+
 // Set the log interval (milliseconds between sensor measurements)
 int LOG_INTERVAL = 10000; // If implementing watchdog (line 184), go to lines 321-328 to manually set the log interval
 RTC_PCF8523 rtc;
