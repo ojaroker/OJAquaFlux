@@ -118,6 +118,7 @@ void loop()
   // -----------------------------------------------------------------------------
   // CO2 Sensor Measurement with K30
   // -----------------------------------------------------------------------------
+#if USE_K30
   int16_t co2Value = readK30_CO2_withRetry();
 
   if (co2Value == 0)
@@ -137,6 +138,7 @@ void loop()
   LOG_STREAM.print(co2Value);
 
   // Watchdog.reset();
+#endif
 
   // -----------------------------------------------------------------------------
   // CH4 Sensor Measurement
