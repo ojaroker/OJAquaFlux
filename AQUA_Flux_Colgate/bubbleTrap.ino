@@ -1,3 +1,8 @@
+// TODO
+// Use LOG_STREAM instead of Serial and XBee for all logging, and remove redundant logging
+// refactor 'open' and 'close' to use real time instead of seconds
+//
+
 // Set the timing when the chamber will open and close (here and lines 532 and 557)
 unsigned long open = 600000; // 4 minutes open (milliseconds) (10 min = 600000)
 
