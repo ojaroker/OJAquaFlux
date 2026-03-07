@@ -1,5 +1,7 @@
 // Set the timing when the chamber will open and close (here and lines 532 and 557)
-unsigned long open = 600000;    // 4 minutes open (milliseconds) (10 min = 600000)
+unsigned long open = 600000; // 4 minutes open (milliseconds) (10 min = 600000)
+
+// TODO: negative number is likely a bug
 unsigned long close = -3000000; // 15 minutes closed (milliseconds) (50 min = 3000000)
 
 // Define solenoid functions
