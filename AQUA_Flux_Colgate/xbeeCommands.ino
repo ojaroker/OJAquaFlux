@@ -14,7 +14,11 @@ void xbeeCommands()
             logfile.print(", ");
             Serial.print("XBee Opening");
             Serial.print(", ");
+#if USE_ACTUATOR
             extendActuator();
+#else
+            LOG_STREAM.println(F("XBee command received to open chamber, but actuator is disabled"));
+#endif
             delay(4000);
             // Watchdog.reset();
             delay(4000);
@@ -36,7 +40,11 @@ void xbeeCommands()
             logfile.print(", ");
             Serial.print("XBee Closing");
             Serial.print(", ");
+#if USE_ACTUATOR
             retractActuator();
+#else
+            LOG_STREAM.println(F("XBee command received to close chamber, but actuator is disabled"));
+#endif
             delay(4000);
             // Watchdog.reset();
             delay(4000);
