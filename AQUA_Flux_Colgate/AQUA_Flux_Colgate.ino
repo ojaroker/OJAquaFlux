@@ -21,7 +21,7 @@
 #define USE_ACTUATOR 0   // 0 - No actuator, 1 - Use linear actuator to open/close chamber
 #define USE_SHT85 1      // 0 - No SHT85, 1 - Use SHT85 for temperature and humidity
 #define USE_DATALOGGER 0 // 0 - No data logger/RTC, 1 - Log to SD card and use RTC
-#define USE_CH4 0        // 0 - No CH4 sensor, 1 - Use CH4 sensor for methane measurements
+#define USE_CH4 1        // 0 - No CH4 sensor, 1 - Use CH4 sensor for methane measurements
 #define USE_TEMP 0       // 0 - No temperature sensor, 1 - Use thermistor for temperature measurements
 
 // -----------------------------------------------------------------------------
@@ -46,6 +46,24 @@ SoftwareSerial XBee(2, 3); // Arduino RX, TX (XBee Dout, Din)
 #define SHT85_ADDRESS         0x44
 SHT85 sht(SHT85_ADDRESS);
 #endif
+
+#if USE_CH4
+// Define the Arduino analog pins that connect to the CH4 and pressure sensors
+#define CH4sens A0 // CH4 sensor 
+#define Vb A1 // CH4 sensor reference circuit
+#define P A2 // differential pressure sensor
+int CH4s = 0;
+int Vbat = 0;
+//int Press = 0;
+
+float CH4smV = 0;
+float VbatmV = 0;
+//float PmV = 0;
+
+float mV = 5000; // voltage (5V)
+float steps = 1024; // steps for ADC
+#endif
+
 
 // -----------------------------------------------------------------------------
 // Logger Configuration
