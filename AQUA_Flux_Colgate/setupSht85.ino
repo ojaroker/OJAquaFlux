@@ -1,7 +1,3 @@
-// Set-up SHT85 sensor
-#define SHT85_ADDRESS         0x44
-SHT85 sht(SHT85_ADDRESS);
-
 void setupSht85() {
 #if USE_SHT85
 #if DEBUG
