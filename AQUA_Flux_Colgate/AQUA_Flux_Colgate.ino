@@ -20,7 +20,7 @@
 #define USE_K30 1        // 0 - No K30, 1 - Use K30 for CO2 measurements
 #define USE_ACTUATOR 0   // 0 - No actuator, 1 - Use linear actuator to open/close chamber
 #define USE_SHT85 1      // 0 - No SHT85, 1 - Use SHT85 for temperature and humidity
-#define USE_DATALOGGER 0 // 0 - No data logger/RTC, 1 - Log to SD card and use RTC
+#define USE_DATALOGGER 1 // 0 - No data logger/RTC, 1 - Log to SD card and use RTC
 #define USE_CH4 1        // 0 - No CH4 sensor, 1 - Use CH4 sensor for methane measurements
 #define USE_TEMP 0       // 0 - No temperature sensor, 1 - Use thermistor for temperature measurements
 
@@ -62,6 +62,15 @@ float VbatmV = 0;
 
 float mV = 5000; // voltage (5V)
 float steps = 1024; // steps for ADC
+#endif
+
+#if USE_DATALOGGER
+// Set the log interval (milliseconds between sensor measurements)
+int LOG_INTERVAL = 10000; // If implementing watchdog (line 184), go to lines 321-328 to manually set the log interval
+RTC_PCF8523 rtc;
+
+// Set-up the logging file
+File logfile;
 #endif
 
 
