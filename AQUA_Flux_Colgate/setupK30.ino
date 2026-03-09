@@ -3,7 +3,7 @@
 // To overcome spurious short-circuit fault when powering K30 with relay,
 // we wait to power K30 until after the Arduino has booted and stabilized.
 
-#define K30_STARTUP_DELAY 3000 // Delay after arduino boot before powering K30 (milliseconds)
+#define K30_STARTUP_DELAY 5000 // Delay after arduino boot before powering K30 (milliseconds)
 
 void setupK30()
 {

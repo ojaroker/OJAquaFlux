@@ -26,7 +26,7 @@
 #define USE_DATALOGGER 1 // 0 - No data logger/RTC, 1 - Log to SD card and use RTC
 #define USE_CH4 1        // 0 - No CH4 sensor, 1 - Use CH4 sensor for methane measurements
 #define USE_TEMP 0       // 0 - No temperature sensor, 1 - Use thermistor for temperature measurements
-#define HAS_K30_RELAY 0  // 0 - K30 hardwired to 12VDC, 1 - Relay used to turn on K30
+#define HAS_K30_RELAY 1  // 0 - K30 hardwired to 12VDC, 1 - Relay used to turn on K30
 
 // -----------------------------------------------------------------------------
 // Arduino Configuration
