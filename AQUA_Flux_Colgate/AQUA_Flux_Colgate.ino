@@ -185,12 +185,13 @@ void loop()
     recoverI2CBus();
   }
 
+  LOG_STREAM.print(", ");
+  LOG_STREAM.print(co2Value);
+
 #if USE_DATALOGGER
   logfile.print(", ");
   logfile.print(co2Value);
 #endif
-  LOG_STREAM.print(", ");
-  LOG_STREAM.print(co2Value);
 
   // Watchdog.reset();
 #endif
@@ -205,16 +206,14 @@ void loop()
   Vbat = analogRead(CH4_VB);    // read reference circuit
   VbatmV = Vbat * (mV / steps); // convert pin reading to mV
   delay(10);                    // delay between reading of different analog pins
+
+  static char ch4buf[24];
+  snprintf(ch4buf, sizeof(ch4buf), ", %.1f, %.1f", CH4smV, VbatmV);
+  LOG_STREAM.print(ch4buf);
+
 #if USE_DATALOGGER
-  logfile.print(", ");
-  logfile.print(CH4smV);
-  logfile.print(", ");
-  logfile.print(VbatmV);
+  logfile.print(ch4buf);
 #endif
-  LOG_STREAM.print(", ");
-  LOG_STREAM.print(CH4smV);
-  LOG_STREAM.print(", ");
-  LOG_STREAM.print(VbatmV);
 
   // Watchdog.reset();
 #endif
@@ -226,18 +225,15 @@ void loop()
   sht.read(); // read SHT85 sensor
   delay(10);
 
-#if USE_DATALOGGER
   static char shtbuf[24];
   snprintf(shtbuf, sizeof(shtbuf), ", %.1f, %.1f, ", sht.getHumidity(), sht.getTemperature());
-  logfile.print(shtbuf);
   LOG_STREAM.print(shtbuf);
-#else
-  LOG_STREAM.print(", ");
-  LOG_STREAM.print(sht.getHumidity(), 1);
-  LOG_STREAM.print(", ");
-  LOG_STREAM.print(sht.getTemperature(), 1);
+
+#if USE_DATALOGGER
+  logfile.print(shtbuf);
 #endif
-  // Watchdog.reset();
+
+// Watchdog.reset();
 #endif
 
   // -----------------------------------------------------------------------------
@@ -266,10 +262,14 @@ void loop()
   // Watchdog.reset();
 #endif
 
+  // -----------------------------------------------------------------------------
+  // Terminate Logging Line and Flush Data
+  // -----------------------------------------------------------------------------
+  LOG_STREAM.println();
+
 #if USE_DATALOGGER
   logfile.println();
   // Write data to the SD card
   logfile.flush();
 #endif
-  LOG_STREAM.println();
 }
