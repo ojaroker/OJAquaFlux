@@ -8,9 +8,6 @@
 
 // pinMode(solpin, OUTPUT);
 
-// Create a servo object named "actuator"
-Servo actuator;
-
 void setupActuator()
 {
 #if USE_ACTUATOR
