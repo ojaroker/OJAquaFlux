@@ -1,5 +1,14 @@
 void xbeeCommands()
 {
+
+#if USE_XBEE
+    if (XBee.available())
+    {
+        LOG_STREAM.print(F("WARNING: XBee command received but no command handler is implemented."));
+        LOG_STREAM.print(F("TODO: refactor the mess in xbeeCommands()"));
+    }
+#endif
+    // Early Return
     return;
 
     // TODO - Refactor this mess
