@@ -30,7 +30,7 @@ void retractActuator()
     actuator.writeMicroseconds(1000); // 1ms pulse to fully retract, adjust the retraction time to compress the chamber gasket on the floating base
 }
 #endif
-void bubbleTrap()
+void chamber()
 {
 #if USE_ACTUATOR
     if (millis() - open >= 59.9 * 60 * 1000UL) // Change first number to minutes closed + minutes open - 0.1
