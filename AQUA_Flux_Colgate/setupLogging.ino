@@ -1,11 +1,13 @@
-
+// Setup Logging
 
 void error(char *str) // Halt if error
 {
-  Serial.print("File error: ");
-  Serial.println(str);
+  LOG_STREAM.print(F("File error: "));
+  LOG_STREAM.println(str);
+  LOG_STREAM.println(F("Execution halted. Please reboot manually."));
+
   while (1)
-    ; // Halt command
+    ; // Halt
 }
 
 void setupLogging(void)
@@ -28,17 +30,17 @@ void setupLogging(void)
 
   if (!rtc.begin())
   {
-    Serial.println("Couldn't find RTC");
-    XBee.println("Couldn't find RTC");
+    LOG_STREAM.println(F("Couldn't find RTC"));
+#if !USE_XBEE
     Serial.flush();
+#endif
     while (1)
       delay(10);
   }
 
   if (!rtc.initialized() || rtc.lostPower())
   {
-    Serial.println("RTC is NOT initialized, let's set the time!");
-    XBee.println("RTC is NOT initialized, let's set the time!");
+    LOG_STREAM.println(F("RTC is NOT initialized. Time Must Be Set"));
     // When time needs to be set on a new device, or after a power loss, the
     // following line sets the RTC to the date & time this sketch was compiled
     // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
@@ -56,14 +58,10 @@ void setupLogging(void)
 
   // int countdownMS = Watchdog.enable(8000); // enable watchdog with timer of 8 seconds (max for Arduino Uno) - if the Arduino halts for more than 8 seconds, the watchdog will restart the sketch
 
-  // List of data products: (1) milliseconds since Arduino was powered, (2) unique Unix stamp, (3) date and time, (4) [CO2] (ppm), (5) CH4 sensor output (mV),
-  // (6) reference circuit output (mV), (7) relative humidity (%), (8) air temperature inside chamber (C), (9) AQUA-Flux ID
-  logfile.println("millis, stampunix, datetime, K30_CO2, CH4smV, Vbat, SHT_RH, SHT_temp, AQUA_Flux1");
-  LOG_STREAM.println("millis, stampunix, datetime, K30_CO2, CH4smV, Vbat, SHT_RH, SHT_temp, AQUA_Flux1");
-
   // Initialize the SD card
-  Serial.print("Initializing SD card...");
-  XBee.print("Initializing SD card...");
+#if DEBUG
+  LOG_STREAM.print(F("Initializing SD card..."));
+#endif
   // Make sure that the default chip select pin is set to OUTPUT
   pinMode(SD_CARD_CS, OUTPUT);
 
@@ -72,8 +70,9 @@ void setupLogging(void)
   {
     error("Card failed or not present");
   }
-  Serial.println("card initialized.");
-  XBee.println("card initialized.");
+#if DEBUG
+  LOG_STREAM.println(F("card initialized."));
+#endif
 
   // Create a new CSV file on the SD card
   char filename[] = "LOGGER00.CSV";
@@ -94,11 +93,11 @@ void setupLogging(void)
   {
     error("Couldn't create file");
   }
+#if DEBUG
+  LOG_STREAM.print(F("Logging to: "));
+  LOG_STREAM.println(filename);
+#endif
 
-  Serial.print("Logging to: ");
-  XBee.print("Logging to: ");
-  Serial.println(filename);
-  XBee.println(filename);
 #else
 #if DEBUG
   LOG_STREAM.println(F("DEBUG - SD card logging disabled"));
