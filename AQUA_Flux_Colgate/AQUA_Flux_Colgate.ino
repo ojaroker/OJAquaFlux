@@ -1,29 +1,36 @@
 // Arduino code for AQUA-Flux
 // Colgate University
 
-#include <SPI.h>            // to communicate with peripheral devices
-#include <SD.h>             // for SD card
-#include <Wire.h>           // for I2C communication
 #include <RTClib.h>         // for real time clock (RTC)
+#include <SD.h>             // for SD card
+#include <SPI.h>            // to communicate with peripheral devices
 #include <SoftwareSerial.h> // to communicate with XBee
-#include "SHT85.h"          // for SHT85 sensor
+#include <Wire.h>           // for I2C communication
+
+#include "SHT85.h" // for SHT85 sensor
 // #include <Adafruit_SleepyDog.h> // for watchdog on R3
-#include <WDT.h>   //for watchdog on R4
 #include <Servo.h> // for linear actuator
+#include <WDT.h>   //for watchdog on R4
 
 #define DEBUG 1
 
 // -----------------------------------------------------------------------------
 // Subsystem Enabling
 // -----------------------------------------------------------------------------
-#define USE_XBEE 1       // 0 - No XBee, Log to Serial; 1 - Use XBee for logging
-#define USE_K30 1        // 0 - No K30, 1 - Use K30 for CO2 measurements
-#define USE_ACTUATOR 1   // 0 - No actuator, 1 - Use linear actuator to open/close chamber
-#define USE_SHT85 1      // 0 - No SHT85, 1 - Use SHT85 for temperature and humidity
-#define USE_DATALOGGER 1 // 0 - No data logger/RTC, 1 - Log to SD card and use RTC
-#define USE_CH4 1        // 0 - No CH4 sensor, 1 - Use CH4 sensor for methane measurements
-#define USE_TEMP 0       // 0 - No temperature sensor, 1 - Use thermistor for temperature measurements
-#define HAS_K30_RELAY 1  // 0 - K30 hardwired to 12VDC, 1 - Relay used to turn on K30
+#define USE_XBEE 1 // 0 - No XBee, Log to Serial; 1 - Use XBee for logging
+#define USE_K30 1  // 0 - No K30, 1 - Use K30 for CO2 measurements
+#define USE_ACTUATOR \
+  1                 // 0 - No actuator, 1 - Use linear actuator to open/close chamber
+#define USE_SHT85 1 // 0 - No SHT85, 1 - Use SHT85 for temperature and humidity
+#define USE_DATALOGGER \
+  1 // 0 - No data logger/RTC, 1 - Log to SD card and use RTC
+#define USE_CH4 \
+  1 // 0 - No CH4 sensor, 1 - Use CH4 sensor for methane measurements
+#define USE_TEMP \
+  0 // 0 - No temperature sensor, 1 - Use thermistor for temperature
+    // measurements
+#define HAS_K30_RELAY \
+  1 // 0 - K30 hardwired to 12VDC, 1 - Relay used to turn on K30
 
 // -----------------------------------------------------------------------------
 // Arduino Configuration
@@ -50,7 +57,8 @@ SoftwareSerial XBee(2, 3); // Arduino RX, TX (XBee Dout, Din)
 // Pin D10 - SPI Chip Select
 #define SD_CARD_CS 10 // Chip Select for data logging SD card
 // Pin D11 - K30 Power-interrupting Relay
-#define K30_RELAY_PIN 11 // K30 turned on after delay to prevent spurious short-circuit fault
+#define K30_RELAY_PIN \
+  11 // K30 turned on after delay to prevent spurious short-circuit fault
 
 // -----------------------------------------------------------------------------
 // SHT85 Humidity and Temperature Sensor Configuration
@@ -81,7 +89,8 @@ float steps = 1024; // steps for ADC
 // -----------------------------------------------------------------------------
 #if USE_DATALOGGER
 // Set the log interval (milliseconds between sensor measurements)
-int LOG_INTERVAL = 10000; // If implementing watchdog (line 184), go to lines 321-328 to manually set the log interval
+int LOG_INTERVAL = 10000; // If implementing watchdog (line 184), go to lines
+                          // 321-328 to manually set the log interval
 RTC_PCF8523 rtc;
 File logfile; // Set-up the logging file
 #endif
@@ -98,10 +107,41 @@ Servo actuator; // Create a servo object named "actuator"
 // -----------------------------------------------------------------------------
 #if USE_XBEE
 #define LOG_STREAM XBee
-#define XBEE_BAUD_RATE 115200 // Use 115200 to minimize interference with actuator servo
+#define XBEE_BAUD_RATE \
+  115200 // Use 115200 to minimize interference with actuator servo
 #else
 #define LOG_STREAM Serial
 #define SERIAL_BAUD_RATE 9600
+#endif
+
+// -----------------------------------------------------------------------------
+// Debug Macros
+//
+// Usage:  DEBUG_PRINT(F("msg"));  DEBUG_PRINTLN(F("msg"));
+//
+// When DEBUG=1, expands to LOG_STREAM.print/println — same stream used
+// everywhere else (XBee or Serial depending on USE_XBEE).
+//
+// When DEBUG=0, expands to do{}while(0) — a standard C idiom for a safe
+// no-op that behaves as a single statement in all contexts. Without it,
+// using the macro in a bare if/else (no braces) would cause the else to
+// attach to the wrong if, producing a silent logic bug:
+//
+//   if (condition)
+//     DEBUG_PRINTLN(F("x"));  // expands to: if(0) println(...);
+//   else                      // else attaches here, not to outer if!
+//     doSomething();
+//
+// do{}while(0) forces the expansion to be a single statement, so the
+// caller must add a semicolon and the else attaches correctly.
+// -----------------------------------------------------------------------------
+#if DEBUG
+#define DEBUG_PRINT(x) LOG_STREAM.print(x)
+#define DEBUG_PRINTLN(x) LOG_STREAM.println(x)
+#else
+// clang-format off
+#define DEBUG_PRINT(x)   do {} while (0)
+#define DEBUG_PRINTLN(x) do {} while (0)
 #endif
 
 ///////////////////////////////////////////////////////////////////
@@ -220,10 +260,8 @@ void loop()
 
   if (co2Value == 0)
   {
-#if DEBUG
-    LOG_STREAM.println(F("DEBUG - CO2 read failed after retries"));
-    LOG_STREAM.print(F("DEBUG - Recovering I2C bus..."));
-#endif
+    DEBUG_PRINTLN(F("DEBUG - CO2 read failed after retries"));
+    DEBUG_PRINT(F("DEBUG - Recovering I2C bus..."));
     recoverI2CBus();
   }
 

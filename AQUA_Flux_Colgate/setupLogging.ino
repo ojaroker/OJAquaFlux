@@ -30,9 +30,7 @@ void setupLogging(void)
 
 #if USE_DATALOGGER
 
-#if DEBUG
-  LOG_STREAM.println(F("DEBUG - Data Logging and RTC enabled"));
-#endif
+  DEBUG_PRINTLN(F("DEBUG - Data Logging and RTC enabled"));
   // Connect to RTC
   //  #ifndef ESP8266 //    -------------------OJ COMMENTED THIS OUT
   //   while (!Serial); // Wait for serial port to connect. Needed for native USB.
@@ -64,9 +62,7 @@ void setupLogging(void)
   // int countdownMS = Watchdog.enable(8000); // enable watchdog with timer of 8 seconds (max for Arduino Uno) - if the Arduino halts for more than 8 seconds, the watchdog will restart the sketch
 
   // Initialize the SD card
-#if DEBUG
-  LOG_STREAM.print(F("Initializing SD card..."));
-#endif
+  DEBUG_PRINT(F("Initializing SD card..."));
   // Make sure that the default chip select pin is set to OUTPUT
   pinMode(SD_CARD_CS, OUTPUT);
 
@@ -75,9 +71,7 @@ void setupLogging(void)
   {
     error("Card failed or not present");
   }
-#if DEBUG
-  LOG_STREAM.println(F("card initialized."));
-#endif
+  DEBUG_PRINTLN(F("card initialized."));
 
   // Create a new CSV file on the SD card
   char filename[] = "LOGGER00.CSV";
@@ -98,15 +92,11 @@ void setupLogging(void)
   {
     error("Couldn't create file");
   }
-#if DEBUG
-  LOG_STREAM.print(F("Logging to: "));
-  LOG_STREAM.println(filename);
-#endif
+  DEBUG_PRINT(F("Logging to: "));
+  DEBUG_PRINTLN(filename);
 
 #else
-#if DEBUG
-  LOG_STREAM.println(F("DEBUG - SD card logging disabled"));
-  LOG_STREAM.println(F("DEBUG - RTC disabled"));
-#endif
+  DEBUG_PRINTLN(F("DEBUG - SD card logging disabled"));
+  DEBUG_PRINTLN(F("DEBUG - RTC disabled"));
 #endif
 }
