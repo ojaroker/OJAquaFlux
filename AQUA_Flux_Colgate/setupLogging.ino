@@ -2,7 +2,7 @@
 
 void error(char *str) // Halt if error
 {
-  LOG_STREAM.print(F("File error: "));
+  LOG_STREAM.print(F("ERROR OCCURRED: "));
   LOG_STREAM.println(str);
   LOG_STREAM.println(F("Execution halted. Please reboot manually."));
 
@@ -30,12 +30,7 @@ void setupLogging(void)
 
   if (!rtc.begin())
   {
-    LOG_STREAM.println(F("Couldn't find RTC"));
-#if !USE_XBEE
-    Serial.flush();
-#endif
-    while (1)
-      delay(10);
+    error("Couldn't find RTC");
   }
 
   if (!rtc.initialized() || rtc.lostPower())
