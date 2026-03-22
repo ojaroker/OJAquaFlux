@@ -1,11 +1,21 @@
-// Setup Logging
+// setupLogging.ino
+//
+// Initializes all logging infrastructure at startup:
+//   1. Opens the XBee serial link (USE_XBEE=1) or USB Serial (USE_XBEE=0)
+//   2. Connects to the PCF8523 RTC and starts it; warns if time is not set
+//   3. Initializes the SD card and creates a new sequentially-numbered CSV
+//      log file (LOGGE0XX.CSV). Halts with an error message if the SD card
+//      or file cannot be opened.
+//
+// error() - logs a message and halts, requiring a manual reboot.
 
 void error(char *str) // Halt if error
 {
   LOG_STREAM.print(F("ERROR OCCURRED: "));
   LOG_STREAM.println(str);
   LOG_STREAM.println(F("Execution halted. Please reboot manually."));
-
+  // Flush serial and clear the receive buffer if Xbee (which is a no-op)
+  LOG_STREAM.flush();
   while (1)
     ; // Halt
 }
