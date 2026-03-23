@@ -3,11 +3,16 @@
 // Initializes all logging infrastructure at startup:
 //   1. Opens the XBee serial link (USE_XBEE=1) or USB Serial (USE_XBEE=0)
 //   2. Connects to the PCF8523 RTC and starts it; warns if time is not set
-//   3. Initializes the SD card and creates a new sequentially-numbered CSV
-//      log file (LOGGE0XX.CSV). Halts with an error message if the SD card
+//   3. Initializes the SD card and opens a date-named CSV log file
+//      (YYYYMMDD.CSV). A same-day reboot appends to the existing file without
+//      duplicating the header. Halts with an error message if the SD card
 //      or file cannot be opened.
 //
-// error() - logs a message and halts, requiring a manual reboot.
+// Functions:
+//   error()          - print error message, flush, and halt (manual reboot required)
+//   openNextLogfile() - open or append to today's YYYYMMDD.CSV; write header if new
+//   rotateLogfile()  - flush/close current file and open the next (called at midnight)
+//   setupLogging()   - called once from setup(); initialises serial, RTC, and SD card
 
 void error(char *str) // Halt if error
 {
@@ -18,6 +23,44 @@ void error(char *str) // Halt if error
   LOG_STREAM.flush();
   while (1)
     ; // Halt
+}
+
+// Opens YYYYMMDD.CSV for today's date (appends if it already exists, e.g. same-day
+// reboot). Writes the CSV header only for new files. Calls error() on failure.
+void openNextLogfile()
+{
+  DateTime now = rtc.now();
+  char filename[13]; // "YYYYMMDD.CSV"
+  snprintf(filename, sizeof(filename), "%04d%02d%02d.CSV",
+           now.year(), now.month(), now.day());
+
+  bool isNewFile = !SD.exists(filename);
+  logfile = SD.open(filename, FILE_WRITE); // FILE_WRITE appends if file exists
+  if (!logfile)
+  {
+    error("Couldn't create file");
+  }
+
+  currentLogDay = now.day();
+  DEBUG_PRINT(F("Logging to: "));
+  DEBUG_PRINTLN(filename);
+
+  if (isNewFile)
+  {
+    // Write header only once per file; skip on same-day reboot (append mode)
+    // List of data products: (1) milliseconds since Arduino was powered, (2) unique Unix stamp, (3) date and time, (4) [CO2] (ppm), (5) CH4 sensor output (mV),
+    // (6) reference circuit output (mV), (7) relative humidity (%), (8) air temperature inside chamber (C), (9) AQUA-Flux ID
+    logfile.println(F("millis, stampunix, datetime, K30_CO2, CH4smV, Vbat, SHT_RH, SHT_temp, AQUA_Flux1"));
+  }
+}
+
+// Closes the current log file and opens the next one.
+void rotateLogfile()
+{
+  logfile.flush();
+  logfile.close();
+  LOG_STREAM.println(F("Log file rotated."));
+  openNextLogfile();
 }
 
 void setupLogging(void)
@@ -73,27 +116,7 @@ void setupLogging(void)
   }
   DEBUG_PRINTLN(F("card initialized."));
 
-  // Create a new CSV file on the SD card
-  char filename[] = "LOGGER00.CSV";
-  for (uint16_t i = 0; i < 100; i++)
-  {
-    filename[5] = i / 100 + '0';
-    filename[6] = (i % 100) / 10 + '0';
-    filename[7] = i % 10 + '0';
-    if (!SD.exists(filename))
-    {
-      // only open a new file if it doesn't exist
-      logfile = SD.open(filename, FILE_WRITE);
-      break; // leave the loop!
-    }
-  }
-
-  if (!logfile)
-  {
-    error("Couldn't create file");
-  }
-  DEBUG_PRINT(F("Logging to: "));
-  DEBUG_PRINTLN(filename);
+  openNextLogfile();
 
 #else
   DEBUG_PRINTLN(F("DEBUG - SD card logging disabled"));

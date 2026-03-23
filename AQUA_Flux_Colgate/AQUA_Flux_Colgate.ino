@@ -17,20 +17,14 @@
 // -----------------------------------------------------------------------------
 // Subsystem Enabling
 // -----------------------------------------------------------------------------
-#define USE_XBEE 1 // 0 - No XBee, Log to Serial; 1 - Use XBee for logging
-#define USE_K30 1  // 0 - No K30, 1 - Use K30 for CO2 measurements
-#define USE_ACTUATOR \
-  1                 // 0 - No actuator, 1 - Use linear actuator to open/close chamber
-#define USE_SHT85 1 // 0 - No SHT85, 1 - Use SHT85 for temperature and humidity
-#define USE_DATALOGGER \
-  1 // 0 - No data logger/RTC, 1 - Log to SD card and use RTC
-#define USE_CH4 \
-  1 // 0 - No CH4 sensor, 1 - Use CH4 sensor for methane measurements
-#define USE_TEMP \
-  0 // 0 - No temperature sensor, 1 - Use thermistor for temperature
-    // measurements
-#define HAS_K30_RELAY \
-  1 // 0 - K30 hardwired to 12VDC, 1 - Relay used to turn on K30
+#define USE_XBEE 1       // 0 - No XBee, Log to Serial; 1 - Use XBee for logging
+#define USE_K30 1        // 0 - No K30, 1 - Use K30 for CO2 measurements
+#define USE_ACTUATOR 1   // 0 - No actuator, 1 - Use linear actuator to open/close chamber
+#define USE_SHT85 1      // 0 - No SHT85, 1 - Use SHT85 for temperature and humidity
+#define USE_DATALOGGER 1 // 0 - No data logger/RTC, 1 - Log to SD card and use RTC
+#define USE_CH4 1        // 0 - No CH4 sensor, 1 - Use CH4 sensor for methane measurements
+#define USE_TEMP 0       // 0 - No temperature sensor, 1 - Use thermistor for temperature measurements
+#define HAS_K30_RELAY 1  // 0 - K30 hardwired to 12VDC, 1 - Relay used to turn on K30
 
 // -----------------------------------------------------------------------------
 // Arduino Configuration
@@ -91,6 +85,7 @@ float steps = 1024; // steps for ADC
 // Set the log interval (milliseconds between sensor measurements)
 int LOG_INTERVAL = 10000; // If implementing watchdog (line 184), go to lines
                           // 321-328 to manually set the log interval
+uint8_t currentLogDay = 0; // RTC day of the current log file; rotate when it changes
 RTC_PCF8523 rtc;
 File logfile; // Set-up the logging file
 #endif
@@ -188,17 +183,14 @@ void setup(void)
   LOG_STREAM.println(SD_CARD_CS);
   LOG_STREAM.print(F("  K30 relay:   D"));
   LOG_STREAM.println(K30_RELAY_PIN);
-  LOG_STREAM.print(F("  XBee baud:   "));
 #if USE_XBEE
+  LOG_STREAM.print(F("  XBee baud:   "));
   LOG_STREAM.println(XBEE_BAUD_RATE);
 #endif
   LOG_STREAM.println(F("==========================="));
 
   // List of data products: (1) milliseconds since Arduino was powered, (2) unique Unix stamp, (3) date and time, (4) [CO2] (ppm), (5) CH4 sensor output (mV),
   // (6) reference circuit output (mV), (7) relative humidity (%), (8) air temperature inside chamber (C), (9) AQUA-Flux ID
-#if USE_DATALOGGER
-  logfile.println(F("millis, stampunix, datetime, K30_CO2, CH4smV, Vbat, SHT_RH, SHT_temp, AQUA_Flux1"));
-#endif
   LOG_STREAM.println(F("millis, stampunix, datetime, K30_CO2, CH4smV, Vbat, SHT_RH, SHT_temp, AQUA_Flux1"));
 }
 
@@ -351,5 +343,10 @@ void loop()
   logfile.println();
   // Write data to the SD card
   logfile.flush();
+  // Rotate to a new log file at midnight (date change)
+  if (now.day() != currentLogDay)
+  {
+    rotateLogfile();
+  }
 #endif
 }
