@@ -1,102 +1,189 @@
-// TODO
-// Use LOG_STREAM instead of Serial and XBee for all logging, and remove redundant logging
-// refactor 'open' and 'close' to use real time instead of seconds
+// chamber.ino
 //
+// Non-blocking chamber actuator state machine.
+//
+// States and transitions:
+//
+//   CLOSING ──(CHAMBER_TRANSITION_MS)──> CLOSED
+//   CLOSED  ──(CHAMBER_CLOSED_MS)──────> OPENING  [extends actuator]
+//   OPENING ──(CHAMBER_TRANSITION_MS)──> OPEN
+//   OPEN    ──(CHAMBER_OPEN_MS)────────> CLOSING  [retracts actuator]
+//
+// Timing constants (adjust to match deployment):
+//   CHAMBER_CLOSED_MS     — how long the chamber stays sealed between measurements
+//   CHAMBER_OPEN_MS       — how long the chamber stays open for equilibration
+//   CHAMBER_TRANSITION_MS — travel time for the linear actuator to fully extend/retract
+//
+// Design notes:
+//   - begin() is non-blocking: it attaches the servo, issues the retract pulse, and
+//     immediately sets state to CLOSING. The transition completes in update().
+//   - update() must be called on every loop() iteration. It compares elapsed time
+//     against the current-state timeout and advances the state when the timeout fires.
+//   - During CLOSING or OPENING the main loop() returns early (after processing XBee
+//     commands), skipping the 7 s sensor delays and all sensor reads. This keeps the
+//     Arduino responsive during the 24 s actuator travel without blocking.
+//   - millis() rollover safety: elapsed = millis() - _stateEnteredMs uses unsigned
+//     subtraction, which wraps correctly as long as no single state lasts > 49.7 days.
+//   - State changes are logged as standalone lines (not embedded in a CSV row) to both
+//     LOG_STREAM and (when USE_DATALOGGER=1) the SD card log file.
 
-// Set the timing when the chamber will open and close (here and lines 532 and 557)
-unsigned long open = 600000; // 4 minutes open (milliseconds) (10 min = 600000)
+// -----------------------------------------------------------------------------
+// Timing Constants
+// -----------------------------------------------------------------------------
+#define CHAMBER_CLOSED_MS (50UL * 60 * 1000) // 50 minutes sealed between measurements
+#define CHAMBER_OPEN_MS (10UL * 60 * 1000)   // 10 minutes open for equilibration
+#define CHAMBER_TRANSITION_MS (24UL * 1000)  // 24 s actuator travel time
 
-// TODO: negative number is likely a bug
-unsigned long close = -3000000; // 15 minutes closed (milliseconds) (50 min = 3000000)
+// Actuator pulse widths — adjust these two values to calibrate for your actuator
+#define ACTUATOR_RETRACT_US 1000 // retract pulse width (µs)
+#define ACTUATOR_EXTEND_US 1850  // extend pulse width (µs)
 
-// Define solenoid functions
-// void solenoidOff() {
-//     digitalWrite(SOLENOID_PIN, LOW);
-// }
-
-// void solenoidOn() {
-//     digitalWrite(SOLENOID_PIN, HIGH);
-// }
-
-// Define linear actuator functions
-#if USE_ACTUATOR
-void extendActuator()
+// -----------------------------------------------------------------------------
+// Actuator State Machine
+// -----------------------------------------------------------------------------
+enum ActuatorState
 {
-    actuator.writeMicroseconds(1850); // give the actuator a 2ms pulse to fully extend (1000us = 1ms), recommended to not reach full 2ms
+    UNKNOWN, // initial state before begin() is called
+    OPENING, // actuator extending; transition in progress
+    OPEN,    // actuator fully extended; chamber open
+    CLOSING, // actuator retracting; transition in progress
+    CLOSED   // actuator fully retracted; chamber sealed
+};
+
+#if USE_ACTUATOR
+class ChamberActuator
+{
+public:
+    // Attach the servo to ACTUATOR_PIN, issue the retract pulse to establish a
+    // known starting position, and enter CLOSING state. Returns immediately —
+    // the transition completes after CHAMBER_TRANSITION_MS via update().
+    void begin();
+
+    // Advance the state machine. Must be called on every loop() iteration.
+    // Checks elapsed time in the current state and triggers the next transition
+    // when the timeout fires. Issues actuator pulses at the start of OPENING and
+    // CLOSING transitions.
+    void update();
+
+    // Returns true while the actuator is moving (OPENING or CLOSING).
+    // The main loop() uses this to skip sensor reads during transitions.
+    bool isTransitioning() const { return _state == OPENING || _state == CLOSING; }
+
+    // Returns the current state for diagnostics.
+    ActuatorState getState() const { return _state; }
+
+    // Force the chamber open immediately, regardless of current state.
+    // Issues the extend pulse and enters OPENING. Intended for XBee manual override.
+    void forceOpen();
+
+    // Force the chamber closed immediately, regardless of current state.
+    // Issues the retract pulse and enters CLOSING. Intended for XBee manual override.
+    void forceClose();
+
+private:
+    ActuatorState _state = UNKNOWN;
+    unsigned long _stateEnteredMs = 0;
+
+    // Record the new state, timestamp it, and log the transition.
+    void _setState(ActuatorState s);
+};
+
+void ChamberActuator::begin()
+{
+    DEBUG_PRINT(F("DEBUG - Linear actuator enabled and in UNKNOWN state"));
+    actuator.attach(ACTUATOR_PIN);
+    actuator.writeMicroseconds(ACTUATOR_RETRACT_US); // retract to known starting position
+    _setState(CLOSING);
 }
 
-void retractActuator()
+void ChamberActuator::_setState(ActuatorState s)
 {
-    actuator.writeMicroseconds(1000); // 1ms pulse to fully retract, adjust the retraction time to compress the chamber gasket on the floating base
-}
-#endif
-void chamber()
-{
-#if USE_ACTUATOR
-    if (millis() - open >= 59.9 * 60 * 1000UL) // Change first number to minutes closed + minutes open - 0.1
+    _state = s;
+    _stateEnteredMs = millis();
+
+    // Log the state change as a standalone line, not as part of a CSV sensor row
+    switch (s)
     {
-        open = millis();
-        XBee.print("Opening");
-        XBee.print(", ");
-        logfile.print("Opening");
-        logfile.print(", ");
-        Serial.print("Opening");
-        Serial.print(", ");
-        extendActuator();
-        delay(4000);
-        // Watchdog.reset();
-        delay(4000);
-        // Watchdog.reset();
-        delay(4000);
-        // Watchdog.reset();
-        delay(4000);
-        // Watchdog.reset();
-        delay(4000);
-        // Watchdog.reset();
-        delay(4000);
-        // Watchdog.reset();
+    case OPENING:
+        LOG_STREAM.print(F("Opening Chamber"));
+        break;
+    case OPEN:
+        LOG_STREAM.println(F("Chamber is OPEN"));
+        break;
+    case CLOSING:
+        LOG_STREAM.print(F("Closing Chamber"));
+        break;
+    case CLOSED:
+        LOG_STREAM.println(F("Chamber is CLOSED"));
+        break;
+    default:
+        break;
     }
 
-    // Watchdog.reset();
-
-    if (millis() - close >= 59.9 * 60 * 1000UL) // Change first number to minutes closed + minutes open - 0.1
+#if USE_DATALOGGER
+    switch (s)
     {
-        close = millis();
-        XBee.print("Closing");
-        XBee.print(", ");
-        logfile.print("Closing");
-        logfile.print(", ");
-        Serial.print("Closing");
-        Serial.print(", ");
-        retractActuator();
-        delay(4000);
-        // Watchdog.reset();
-        delay(4000);
-        // Watchdog.reset();
-        delay(4000);
-        // Watchdog.reset();
-        delay(4000);
-        // Watchdog.reset();
-        delay(4000);
-        // Watchdog.reset();
-        delay(4000);
-        // Watchdog.reset();
+    case OPEN:
+        logfile.println(F("Chamber is OPEN"));
+        break;
+    case CLOSED:
+        logfile.println(F("Chamber is CLOSED"));
+        break;
+    default:
+        break;
     }
-
-    // Vent the bubble trap with the solenoid valve, if full (full mV may differ depending on size of cylinder)
-
-    // Watchdog.reset();
-
-    // if (PmV > 800) // set to 800 mV
-    // {XBee.print("Venting");
-    //  XBee.print(", ");
-    //  logfile.print("Venting");
-    //  logfile.print(", ");
-    //  Serial.print("Venting");
-    //  Serial.print(", ");
-    //  solenoidOn();
-    //  delay(5000); // vent/open for 5 seconds
-    //  solenoidOff();
-    // }
 #endif
 }
+
+void ChamberActuator::update()
+{
+    unsigned long elapsed = millis() - _stateEnteredMs;
+
+    switch (_state)
+    {
+    case CLOSING:
+        // Wait for the actuator to finish retracting
+        if (elapsed >= CHAMBER_TRANSITION_MS)
+            _setState(CLOSED);
+        break;
+
+    case CLOSED:
+        // Hold sealed for the measurement period, then start opening
+        if (elapsed >= CHAMBER_CLOSED_MS)
+        {
+            actuator.writeMicroseconds(ACTUATOR_EXTEND_US); // extend
+            _setState(OPENING);
+        }
+        break;
+
+    case OPENING:
+        // Wait for the actuator to finish extending
+        if (elapsed >= CHAMBER_TRANSITION_MS)
+            _setState(OPEN);
+        break;
+
+    case OPEN:
+        // Hold open for equilibration, then start closing
+        if (elapsed >= CHAMBER_OPEN_MS)
+        {
+            actuator.writeMicroseconds(ACTUATOR_RETRACT_US); // retract
+            _setState(CLOSING);
+        }
+        break;
+
+    default:
+        break;
+    }
+}
+void ChamberActuator::forceOpen()
+{
+    actuator.writeMicroseconds(ACTUATOR_EXTEND_US); // extend
+    _setState(OPENING);
+}
+
+void ChamberActuator::forceClose()
+{
+    actuator.writeMicroseconds(ACTUATOR_RETRACT_US); // retract
+    _setState(CLOSING);
+}
+#endif // USE_ACTUATOR

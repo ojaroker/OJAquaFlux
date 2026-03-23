@@ -25,6 +25,7 @@ void error(char *str) // Halt if error
     ; // Halt
 }
 
+#if USE_DATALOGGER
 // Opens YYYYMMDD.CSV for today's date (appends if it already exists, e.g. same-day
 // reboot). Writes the CSV header only for new files. Calls error() on failure.
 void openNextLogfile()
@@ -62,6 +63,7 @@ void rotateLogfile()
   LOG_STREAM.println(F("Log file rotated."));
   openNextLogfile();
 }
+#endif // USE_DATALOGGER
 
 void setupLogging(void)
 {
