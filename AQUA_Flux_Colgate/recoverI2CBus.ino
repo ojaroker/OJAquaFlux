@@ -49,6 +49,7 @@ void recoverI2CBus() {
   // Re-initialise Wire and restore reduced clock speed.
   Wire.begin();
   Wire.setClock(I2C_CLOCK_SPEED);
+  delay(10); // allow bus devices to stabilize before the next I2C transaction
 
   LOG_STREAM.println(F("I2C bus initialized"));
 }

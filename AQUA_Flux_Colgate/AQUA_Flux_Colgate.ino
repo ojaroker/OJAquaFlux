@@ -245,11 +245,23 @@ void loop()
 #if USE_K30
   int16_t co2Value = readK30_CO2_withRetry();
 
+  // K30 locks the I2C bus periodically, creating problems with RTC communication
+  // Only option is robust error handling to reset and retry
   if (co2Value == 0)
   {
     DEBUG_PRINTLN(F("DEBUG - CO2 read failed after retries"));
     DEBUG_PRINT(F("DEBUG - Recovering I2C bus..."));
     recoverI2CBus();
+    // Terminate the partial CSV row (timestamp already written above) with a
+    // recovery marker so the next iteration starts on a clean line. Then return
+    // immediately — this skips the rotation check, which uses the `now` captured
+    // while the bus was locked and may contain corrupt date values.
+    LOG_STREAM.println(F(", <<<I2C_RECOVERY>>>"));
+#if USE_DATALOGGER
+    logfile.println(F(", <<<I2C_RECOVERY>>>"));
+    logfile.flush();
+#endif
+    return;
   }
 
   LOG_STREAM.print(", ");
