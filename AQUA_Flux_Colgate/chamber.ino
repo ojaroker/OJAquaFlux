@@ -34,6 +34,10 @@
 #define CHAMBER_OPEN_MS (10UL * 60 * 1000)   // 10 minutes open for equilibration
 #define CHAMBER_TRANSITION_MS (24UL * 1000)  // 24 s actuator travel time
 
+// Actuator pulse widths — adjust these two values to calibrate for your actuator
+#define ACTUATOR_RETRACT_US 1000 // retract pulse width (µs)
+#define ACTUATOR_EXTEND_US 1850  // extend pulse width (µs)
+
 // -----------------------------------------------------------------------------
 // Actuator State Machine
 // -----------------------------------------------------------------------------
@@ -68,6 +72,14 @@ public:
     // Returns the current state for diagnostics.
     ActuatorState getState() const { return _state; }
 
+    // Force the chamber open immediately, regardless of current state.
+    // Issues the extend pulse and enters OPENING. Intended for XBee manual override.
+    void forceOpen();
+
+    // Force the chamber closed immediately, regardless of current state.
+    // Issues the retract pulse and enters CLOSING. Intended for XBee manual override.
+    void forceClose();
+
 private:
     ActuatorState _state = UNKNOWN;
     unsigned long _stateEnteredMs = 0;
@@ -80,7 +92,7 @@ void ChamberActuator::begin()
 {
     DEBUG_PRINT(F("DEBUG - Linear actuator enabled and in UNKNOWN state"));
     actuator.attach(ACTUATOR_PIN);
-    actuator.writeMicroseconds(1000); // retract to known starting position
+    actuator.writeMicroseconds(ACTUATOR_RETRACT_US); // retract to known starting position
     _setState(CLOSING);
 }
 
@@ -139,7 +151,7 @@ void ChamberActuator::update()
         // Hold sealed for the measurement period, then start opening
         if (elapsed >= CHAMBER_CLOSED_MS)
         {
-            actuator.writeMicroseconds(1850); // extend
+            actuator.writeMicroseconds(ACTUATOR_EXTEND_US); // extend
             _setState(OPENING);
         }
         break;
@@ -154,7 +166,7 @@ void ChamberActuator::update()
         // Hold open for equilibration, then start closing
         if (elapsed >= CHAMBER_OPEN_MS)
         {
-            actuator.writeMicroseconds(1000); // retract
+            actuator.writeMicroseconds(ACTUATOR_RETRACT_US); // retract
             _setState(CLOSING);
         }
         break;
@@ -162,5 +174,16 @@ void ChamberActuator::update()
     default:
         break;
     }
+}
+void ChamberActuator::forceOpen()
+{
+    actuator.writeMicroseconds(ACTUATOR_EXTEND_US); // extend
+    _setState(OPENING);
+}
+
+void ChamberActuator::forceClose()
+{
+    actuator.writeMicroseconds(ACTUATOR_RETRACT_US); // retract
+    _setState(CLOSING);
 }
 #endif // USE_ACTUATOR
