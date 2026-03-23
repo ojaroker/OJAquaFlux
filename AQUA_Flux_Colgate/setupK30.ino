@@ -9,23 +9,17 @@ void setupK30()
 {
 #if USE_K30
 
-#if DEBUG
-    LOG_STREAM.println(F("DEBUG - K30 CO2 sensor enabled"));
-#endif
+  DEBUG_PRINTLN(F("DEBUG - K30 CO2 sensor enabled"));
 
 #if HAS_K30_RELAY
     // Power on K30
-#if DEBUG
-    LOG_STREAM.print(F("DEBUG - Turning on K30..."));
-#endif
+  DEBUG_PRINT(F("DEBUG - Turning on K30..."));
     delay(K30_STARTUP_DELAY); // Wait for K30 to boot up
     pinMode(K30_RELAY_PIN, OUTPUT);
     digitalWrite(K30_RELAY_PIN, HIGH);
     delay(2000); // Wait for K30 to boot up
 
-#if DEBUG
-    LOG_STREAM.println(F("Done"));
-#endif
+  DEBUG_PRINTLN(F("Done"));
 
 #endif // HAS_K30_RELAY
 
@@ -36,9 +30,7 @@ void setupK30()
 
 #else
 
-#if DEBUG
-    LOG_STREAM.println(F("DEBUG - K30 CO2 sensor disabled"));
-#endif
+  DEBUG_PRINTLN(F("DEBUG - K30 CO2 sensor disabled"));
 
 #endif // USE_K30
 }

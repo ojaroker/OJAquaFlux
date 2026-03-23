@@ -11,15 +11,11 @@
 void setupActuator()
 {
 #if USE_ACTUATOR
-#if DEBUG
-  LOG_STREAM.println(F("DEBUG - Linear actuator enabled"));
-#endif
+  DEBUG_PRINTLN(F("DEBUG - Linear actuator enabled"));
   // Attach the actuator to Arduino digital pin 4
   actuator.attach(ACTUATOR_PIN);
   actuator.writeMicroseconds(1850); // 1ms pulse to fully retract the actuator, 2ms pulse to fully extend the actuator (1000us = 1ms)
 #else
-#if DEBUG
-  LOG_STREAM.println(F("DEBUG - Linear actuator disabled"));
-#endif
+  DEBUG_PRINTLN(F("DEBUG - Linear actuator disabled"));
 #endif
 }
