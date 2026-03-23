@@ -83,8 +83,8 @@ float steps = 1024; // steps for ADC
 // -----------------------------------------------------------------------------
 #if USE_DATALOGGER
 // Set the log interval (milliseconds between sensor measurements)
-int LOG_INTERVAL = 10000; // If implementing watchdog (line 184), go to lines
-                          // 321-328 to manually set the log interval
+int LOG_INTERVAL = 10000;  // If implementing watchdog (line 184), go to lines
+                           // 321-328 to manually set the log interval
 uint8_t currentLogDay = 0; // RTC day of the current log file; rotate when it changes
 RTC_PCF8523 rtc;
 File logfile; // Set-up the logging file
@@ -94,7 +94,8 @@ File logfile; // Set-up the logging file
 // Actuator Configuration
 // -----------------------------------------------------------------------------
 #if USE_ACTUATOR
-Servo actuator; // Create a servo object named "actuator"
+Servo actuator;                  // servo object used by ChamberActuator
+ChamberActuator chamberActuator; // state machine instance
 #endif
 
 // -----------------------------------------------------------------------------
@@ -145,70 +146,50 @@ Servo actuator; // Create a servo object named "actuator"
 void setup(void)
 {
   setupLogging(); // Initialize XBee or Serial communication, RTC, Datalogger
+  printConfig();
   setupI2c();
   setupK30();
   scanI2cBus();
-  setupActuator();
   setupSht85();
-
-  LOG_STREAM.println(F("=== Build Configuration ==="));
-  LOG_STREAM.print(F("  XBee:        "));
-  LOG_STREAM.println(USE_XBEE ? F("enabled") : F("disabled"));
-  LOG_STREAM.print(F("  K30 CO2:     "));
-  LOG_STREAM.println(USE_K30 ? F("enabled") : F("disabled"));
-  LOG_STREAM.print(F("  K30 relay:   "));
-  LOG_STREAM.println(HAS_K30_RELAY ? F("enabled") : F("disabled"));
-  LOG_STREAM.print(F("  Actuator:    "));
-  LOG_STREAM.println(USE_ACTUATOR ? F("enabled") : F("disabled"));
-  LOG_STREAM.print(F("  SHT85:       "));
-  LOG_STREAM.println(USE_SHT85 ? F("enabled") : F("disabled"));
-  LOG_STREAM.print(F("  Datalogger:  "));
-  LOG_STREAM.println(USE_DATALOGGER ? F("enabled") : F("disabled"));
-  LOG_STREAM.print(F("  CH4 sensor:  "));
-  LOG_STREAM.println(USE_CH4 ? F("enabled") : F("disabled"));
-  LOG_STREAM.print(F("  Thermistor:  "));
-  LOG_STREAM.println(USE_TEMP ? F("enabled") : F("disabled"));
-  LOG_STREAM.println(F("=== Pin Assignments ==="));
-  LOG_STREAM.print(F("  CH4 sensor:  A"));
-  LOG_STREAM.println(CH4_SENS - A0);
-  LOG_STREAM.print(F("  CH4 Vbat:    A"));
-  LOG_STREAM.println(CH4_VB - A0);
-  LOG_STREAM.print(F("  Pressure:    A"));
-  LOG_STREAM.println(P - A0);
-  LOG_STREAM.print(F("  Actuator:    D"));
-  LOG_STREAM.println(ACTUATOR_PIN);
-  LOG_STREAM.print(F("  Solenoid:    D"));
-  LOG_STREAM.println(SOLENOID_PIN);
-  LOG_STREAM.print(F("  SD card CS:  D"));
-  LOG_STREAM.println(SD_CARD_CS);
-  LOG_STREAM.print(F("  K30 relay:   D"));
-  LOG_STREAM.println(K30_RELAY_PIN);
-#if USE_XBEE
-  LOG_STREAM.print(F("  XBee baud:   "));
-  LOG_STREAM.println(XBEE_BAUD_RATE);
+#if USE_ACTUATOR
+  chamberActuator.begin();
+#else
+  DEBUG_PRINTLN(F("DEBUG - Linear actuator disabled"));
 #endif
-  LOG_STREAM.println(F("==========================="));
-
-  // List of data products: (1) milliseconds since Arduino was powered, (2) unique Unix stamp, (3) date and time, (4) [CO2] (ppm), (5) CH4 sensor output (mV),
-  // (6) reference circuit output (mV), (7) relative humidity (%), (8) air temperature inside chamber (C), (9) AQUA-Flux ID
-  LOG_STREAM.println(F("millis, stampunix, datetime, K30_CO2, CH4smV, Vbat, SHT_RH, SHT_temp, AQUA_Flux1"));
-}
+  }
 
 ///////////////////////////////////////////////////////////////////
 // Start Sampling Loop
 ///////////////////////////////////////////////////////////////////
 void loop()
 {
+#if USE_ACTUATOR
+  // Advance the state machine on every iteration. This must run before any
+  // delay so that CLOSING/OPENING transitions are detected promptly.
+  chamberActuator.update();
 
-  uint32_t m = millis(); // Arduino uptime in milliseconds since last reset, used for timestamping and timing of chamber opening/closing
+  if (chamberActuator.isTransitioning())
+  {
+    // During the 24 s actuator travel we skip the 7 s sensor delays and all
+    // sensor reads — there is no useful data while the chamber is moving.
+    // Print a dot once per second so the log shows the program is still running.
+    // XBee commands are still processed so the device remains responsive.
+    static unsigned long lastDotMs = 0;
+    if (millis() - lastDotMs >= 1000)
+    {
+      LOG_STREAM.print('.');
+      lastDotMs = millis();
+    }
+#if USE_XBEE
+    xbeeCommands();
+#endif
+    return;
+  }
+#endif //USE_ACTUATOR
 
-  // Watchdog.reset(); // Must reset the watchdog at least every 8 seconds
+  uint32_t m = millis(); // Arduino uptime in milliseconds since last reset
 
-  // Delay for the amount of time we want between readings
-  // delay((LOG_INTERVAL -1) - (millis() % LOG_INTERVAL)); // doesn't work with watchdog enabled
-  // with watchdog enabled, manually set the delay between readings:
   delay(4000);
-  // Watchdog.reset();
   delay(3000);
   // Watchdog.reset();
   // delay(4000);
@@ -313,15 +294,6 @@ void loop()
   // -----------------------------------------------------------------------------
 #if USE_TEMP
   temp_sensor();
-  // Watchdog.reset();
-#endif
-
-  // -----------------------------------------------------------------------------
-  // Actuator Control
-  // -----------------------------------------------------------------------------
-#if USE_ACTUATOR
-  // Open or close the chamber with the linear actuator, if time
-  chamber();
   // Watchdog.reset();
 #endif
 
