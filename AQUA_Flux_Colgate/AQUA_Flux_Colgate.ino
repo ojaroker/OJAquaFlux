@@ -194,6 +194,13 @@ void loop()
   }
 #endif //USE_ACTUATOR
 
+  // Process XBee commands before any delays so responses are near-instant.
+  // A second call at the end of loop() handles commands that arrive during
+  // the sensor read/delay block.
+#if USE_XBEE
+  xbeeCommands();
+#endif
+
   uint32_t m = millis(); // Arduino uptime in milliseconds since last reset
 
   delay(4000);
