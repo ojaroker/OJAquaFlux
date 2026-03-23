@@ -91,14 +91,6 @@ File logfile; // Set-up the logging file
 #endif
 
 // -----------------------------------------------------------------------------
-// Actuator Configuration
-// -----------------------------------------------------------------------------
-#if USE_ACTUATOR
-Servo actuator;                  // servo object used by ChamberActuator
-ChamberActuator chamberActuator; // state machine instance
-#endif
-
-// -----------------------------------------------------------------------------
 // Logger Configuration
 // -----------------------------------------------------------------------------
 #if USE_XBEE
@@ -138,6 +130,21 @@ ChamberActuator chamberActuator; // state machine instance
 // clang-format off
 #define DEBUG_PRINT(x)   do {} while (0)
 #define DEBUG_PRINTLN(x) do {} while (0)
+#endif
+
+// -----------------------------------------------------------------------------
+// Chamber Actuator State Machine
+// Must be included after LOG_STREAM and DEBUG macros are defined, and before
+// the ChamberActuator global instance is declared below.
+// -----------------------------------------------------------------------------
+#include "chamber.h"
+
+// -----------------------------------------------------------------------------
+// Actuator Configuration
+// -----------------------------------------------------------------------------
+#if USE_ACTUATOR
+Servo actuator;                  // servo object used by ChamberActuator
+ChamberActuator chamberActuator; // state machine instance
 #endif
 
 ///////////////////////////////////////////////////////////////////
