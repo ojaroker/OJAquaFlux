@@ -6,6 +6,9 @@
 //   'O' / 'o' — force the chamber open   (extend actuator, enter OPENING state)
 //   'C' / 'c' — force the chamber closed  (retract actuator, enter CLOSING state)
 //   'D' / 'd' — set RTC date and time interactively
+//   'I' / 'i' — set the AQUA-Flux unit ID (1-255, logged as last CSV column)
+//   'L' / 'l' — set the sensor log interval in seconds (3s min to CHAMBER_CLOSED_MS/10)
+//   'P' / 'p' — print build configuration and pin assignments
 //   'S' / 's' — suspend: flush and close log file; notify operator safe to power off
 //   'R' / 'r' — resume: reopen log file and restart the sampling loop
 //
@@ -24,6 +27,7 @@ void xbeeHelp()
     LOG_STREAM.println(F(" 'C' - Force chamber Closed"));
     LOG_STREAM.println(F(" 'D' - Set RTC Date and Time"));
     LOG_STREAM.println(F(" 'I' - Set AQUA-Flux unit ID"));
+    LOG_STREAM.println(F(" 'L' - Set log interval (seconds)"));
     LOG_STREAM.println(F(" 'P' - Print configuration"));
     LOG_STREAM.println(F(" 'S' - Suspend (safe power-off)"));
     LOG_STREAM.println(F(" 'R' - Resume operation"));
@@ -68,6 +72,57 @@ static void setAquaFluxId()
     LOG_STREAM.println(aquaFluxId);
 }
 
+// Prompt for a new sensor log interval (in seconds) and update LOG_INTERVAL.
+// Allowable range: 3 s minimum, CHAMBER_CLOSED_MS/10 maximum (300 s at 50-min cycle).
+static void setLogInterval()
+{
+    const unsigned long minS = 3UL;
+    const unsigned long maxS = CHAMBER_CLOSED_MS / 10UL / 1000UL;
+
+    LOG_STREAM.print(F("Current log interval: "));
+    LOG_STREAM.print(LOG_INTERVAL / 1000UL);
+    LOG_STREAM.print(F(" s ("));
+    LOG_STREAM.print(minS);
+    LOG_STREAM.print(F("-"));
+    LOG_STREAM.print(maxS);
+    LOG_STREAM.println(F(" s allowed):"));
+
+    char buf[4]; // up to 3 digits (max 300)
+    uint8_t len = 0;
+    unsigned long deadline = millis() + 30000UL;
+    while (millis() < deadline)
+    {
+        if (!LOG_STREAM.available())
+            continue;
+        char c = (char)LOG_STREAM.read();
+        if (c == '\r' || c == '\n')
+            break;
+        if (c >= '0' && c <= '9' && len < 3)
+            buf[len++] = c;
+    }
+    buf[len] = '\0';
+
+    if (len == 0)
+    {
+        LOG_STREAM.println(F("Timeout. Interval unchanged."));
+        return;
+    }
+    unsigned long val = (unsigned long)atoi(buf);
+    if (val < minS || val > maxS)
+    {
+        LOG_STREAM.print(F("Invalid. Must be between"));
+        LOG_STREAM.print(minS);
+        LOG_STREAM.print(F("-"));
+        LOG_STREAM.print(maxS);
+        LOG_STREAM.println(F(" s. Interval unchanged."));
+        return;
+    }
+    LOG_INTERVAL = val * 1000UL;
+    LOG_STREAM.print(F("Log interval set to: "));
+    LOG_STREAM.print(val);
+    LOG_STREAM.println(F(" s"));
+}
+
 void xbeeCommands()
 {
 #if USE_XBEE
@@ -106,6 +161,12 @@ void xbeeCommands()
         setAquaFluxId();
         break;
 
+    // SET LOG INTERVAL
+    case 'l':
+    case 'L':
+        setLogInterval();
+        break;
+
     // PRINT CONFIG
     case 'p':
     case 'P':
@@ -125,6 +186,11 @@ void xbeeCommands()
     // SUSPEND — flush log, notify operator it is safe to power off
     case 's':
     case 'S':
+        if (xbeeSuspended)
+        {
+            LOG_STREAM.println(F("Already suspended."));
+            break;
+        }
 #if USE_DATALOGGER
         logfile.flush();
         logfile.close();

@@ -137,7 +137,7 @@ void setRtcDate()
   }
 
   // ── Show and confirm ──────────────────────────────────────────────────────
-  char preview[22]; // "YYYY-MM-DD HH:MM:SS UTC"
+  char preview[24]; // "YYYY-MM-DD HH:MM:SS UTC" = 23 chars + null
   snprintf(preview, sizeof(preview), "%04d-%02d-%02d %02d:%02d:%02d UTC",
            year, month, day, hour, minute, second);
   LOG_STREAM.print(F("Set RTC to: "));
@@ -176,7 +176,7 @@ void setRtcDate()
     error("RTC did not retain the written time");
   }
 
-  char verifyBuf[22];
+  char verifyBuf[24]; // "YYYY-MM-DD HH:MM:SS UTC" = 23 chars + null
   snprintf(verifyBuf, sizeof(verifyBuf), "%04d-%02d-%02d %02d:%02d:%02d UTC",
            readBack.year(), readBack.month(), readBack.day(),
            readBack.hour(), readBack.minute(), readBack.second());

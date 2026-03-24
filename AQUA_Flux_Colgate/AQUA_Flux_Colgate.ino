@@ -26,6 +26,11 @@
 #define USE_TEMP 0       // 0 - No temperature sensor, 1 - Use thermistor for temperature measurements
 #define HAS_K30_RELAY 1  // 0 - K30 hardwired to 12VDC, 1 - Relay used to turn on K30
 
+// Milliseconds between sensor measurements.
+// Minimum: 3 seconds, limited by K30 measurment period
+// Maximum: Determined by CHAMBER_CLOSED_MS
+unsigned long LOG_INTERVAL = 10000UL;
+
 // -----------------------------------------------------------------------------
 // Arduino Configuration
 // -----------------------------------------------------------------------------
@@ -87,9 +92,6 @@ float steps = 1024; // steps for ADC
 // Datalogger Configuration
 // -----------------------------------------------------------------------------
 #if USE_DATALOGGER
-// Set the log interval (milliseconds between sensor measurements)
-int LOG_INTERVAL = 10000;  // If implementing watchdog (line 184), go to lines
-                           // 321-328 to manually set the log interval
 uint8_t currentLogDay = 0; // RTC day of the current log file; rotate when it changes
 RTC_PCF8523 rtc;
 File logfile; // Set-up the logging file

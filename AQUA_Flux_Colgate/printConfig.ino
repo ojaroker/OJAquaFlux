@@ -8,6 +8,9 @@ void printConfig()
   LOG_STREAM.print(F("=== AQUA-Flux ID: "));
   LOG_STREAM.print(aquaFluxId);
   LOG_STREAM.println(F(" ==="));
+  LOG_STREAM.print(F("  Log interval: "));
+  LOG_STREAM.print(LOG_INTERVAL / 1000UL);
+  LOG_STREAM.println(F(" s"));
   LOG_STREAM.println(F("=== Build Configuration ==="));
   LOG_STREAM.print(F("  XBee:        "));
   LOG_STREAM.println(USE_XBEE ? F("enabled") : F("disabled"));
