@@ -16,10 +16,6 @@
 // sensor reads and delays, calling only xbeeCommands() until 'R' is received.
 // Unknown commands echo the received byte and print the help list.
 
-// Global flag — true while the unit is suspended via the 'S' command.
-// Checked in loop() to skip sensor reads until 'R' resumes operation.
-bool xbeeSuspended = false;
-
 void xbeeHelp()
 {
     LOG_STREAM.println(F("===== XBee Commands ====="));

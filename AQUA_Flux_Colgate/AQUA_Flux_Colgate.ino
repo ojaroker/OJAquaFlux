@@ -104,6 +104,16 @@ File logfile; // Set-up the logging file
 uint8_t aquaFluxId = 1;
 
 // -----------------------------------------------------------------------------
+// XBee Suspension Flag
+// -----------------------------------------------------------------------------
+// Set by the 'S' command to skip sensor reads; cleared by 'R' to resume.
+// Declared here (not in xbeeCommands.ino) so loop() can see it — Arduino only
+// hoists function prototypes, not variable declarations, during concatenation.
+#if USE_XBEE
+bool xbeeSuspended = false;
+#endif
+
+// -----------------------------------------------------------------------------
 // Logger Configuration
 // -----------------------------------------------------------------------------
 #if USE_XBEE
