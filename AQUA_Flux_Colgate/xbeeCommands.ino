@@ -23,9 +23,49 @@ void xbeeHelp()
     LOG_STREAM.println(F(" 'O' - Force chamber Open"));
     LOG_STREAM.println(F(" 'C' - Force chamber Closed"));
     LOG_STREAM.println(F(" 'D' - Set RTC Date and Time"));
+    LOG_STREAM.println(F(" 'I' - Set AQUA-Flux unit ID"));
+    LOG_STREAM.println(F(" 'P' - Print configuration"));
     LOG_STREAM.println(F(" 'S' - Suspend (safe power-off)"));
     LOG_STREAM.println(F(" 'R' - Resume operation"));
     LOG_STREAM.println(F("========================="));
+}
+
+// Prompt for a new unit ID (1-255) and update aquaFluxId.
+static void setAquaFluxId()
+{
+    LOG_STREAM.print(F("Current ID: "));
+    LOG_STREAM.println(aquaFluxId);
+    LOG_STREAM.println(F("Enter new AQUA-Flux ID (1-255):"));
+
+    char buf[4];
+    uint8_t len = 0;
+    unsigned long deadline = millis() + 30000UL;
+    while (millis() < deadline)
+    {
+        if (!LOG_STREAM.available())
+            continue;
+        char c = (char)LOG_STREAM.read();
+        if (c == '\r' || c == '\n')
+            break;
+        if (c >= '0' && c <= '9' && len < 3)
+            buf[len++] = c;
+    }
+    buf[len] = '\0';
+
+    if (len == 0)
+    {
+        LOG_STREAM.println(F("Timeout. ID unchanged."));
+        return;
+    }
+    int val = atoi(buf);
+    if (val < 1 || val > 255)
+    {
+        LOG_STREAM.println(F("Invalid. ID must be 1-255. ID unchanged."));
+        return;
+    }
+    aquaFluxId = (uint8_t)val;
+    LOG_STREAM.print(F("AQUA-Flux ID set to: "));
+    LOG_STREAM.println(aquaFluxId);
 }
 
 void xbeeCommands()
@@ -58,6 +98,18 @@ void xbeeCommands()
 #else
         LOG_STREAM.println(F("Unable to Close. Actuator is not enabled."));
 #endif
+        break;
+
+    // SET UNIT ID
+    case 'i':
+    case 'I':
+        setAquaFluxId();
+        break;
+
+    // PRINT CONFIG
+    case 'p':
+    case 'P':
+        printConfig();
         break;
 
     // SET DATE

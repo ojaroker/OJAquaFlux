@@ -96,6 +96,12 @@ File logfile; // Set-up the logging file
 #endif
 
 // -----------------------------------------------------------------------------
+// AQUA-Flux Unit ID
+// -----------------------------------------------------------------------------
+// Logged as the last CSV column. Set at runtime via XBee 'I' command.
+uint8_t aquaFluxId = 1;
+
+// -----------------------------------------------------------------------------
 // Logger Configuration
 // -----------------------------------------------------------------------------
 #if USE_XBEE
@@ -175,6 +181,12 @@ void setup(void)
 ///////////////////////////////////////////////////////////////////
 void loop()
 {
+
+  //
+  // NO LOGGING -- LOOP RETURNS EARLY
+  // - When actuator in opening/closing state
+  // - Suspended via xbee 'S' command
+  //
 #if USE_ACTUATOR
   // Advance the state machine on every iteration. This must run before any
   // delay so that CLOSING/OPENING transitions are detected promptly.
@@ -195,6 +207,8 @@ void loop()
 #if USE_XBEE
     xbeeCommands();
 #endif
+    // Restart the loop while Chamber is opening or closing
+    // Only take measurements when in Open or Closed state
     return;
   }
 #endif //USE_ACTUATOR
@@ -209,22 +223,12 @@ void loop()
   }
 #endif
 
-  // Process XBee commands before any delays so responses are near-instant.
-  // A second call at the end of loop() handles commands that arrive during
-  // the sensor read/delay block.
-#if USE_XBEE
-  xbeeCommands();
-#endif
-
+  //
+  // SENSOR MEASUREMENT AND LOGGING -- NORMAL LOOPING
+  // - Normal Operation
+  //
+  interruptibleWait(LOG_INTERVAL); // xbee commands handled during wait
   uint32_t m = millis(); // Arduino uptime in milliseconds since last reset
-
-  delay(4000);
-  delay(3000);
-  // Watchdog.reset();
-  // delay(4000);
-  // Watchdog.reset();
-  // delay(1495);
-  // Watchdog.reset();
 
 #if USE_DATALOGGER
   // Log RTC time to SD card file and print to serial monitor and XBee
@@ -240,19 +244,6 @@ void loop()
 #else
   LOG_STREAM.print(m); // milliseconds since start
 #endif
-
-  // Watchdog.reset();
-
-  // delay(4000);
-  // Watchdog.reset();
-  // delay(4000);
-  //  Watchdog.reset();
-  //  delay(4000);
-  //  Watchdog.reset();
-  delay(4000);
-  // Watchdog.reset();
-
-  // delay(16000); // these delays are necessary for K33
 
   // -----------------------------------------------------------------------------
   // CO2 Sensor Measurement with K30
@@ -320,14 +311,13 @@ void loop()
   delay(10);
 
   static char shtbuf[24];
-  snprintf(shtbuf, sizeof(shtbuf), ", %.1f, %.1f, ", sht.getHumidity(), sht.getTemperature());
+  snprintf(shtbuf, sizeof(shtbuf), ", %.1f, %.1f", sht.getHumidity(), sht.getTemperature());
   LOG_STREAM.print(shtbuf);
 
 #if USE_DATALOGGER
   logfile.print(shtbuf);
 #endif
 
-// Watchdog.reset();
 #endif
 
   // -----------------------------------------------------------------------------
@@ -335,16 +325,16 @@ void loop()
   // -----------------------------------------------------------------------------
 #if USE_TEMP
   temp_sensor();
-  // Watchdog.reset();
 #endif
 
   // -----------------------------------------------------------------------------
-  // XBee Command Handling
+  // AQUA-Flux Unit ID
   // -----------------------------------------------------------------------------
-#if USE_XBEE
-  // Define XBee commands (optional, can help with testing/trouble-shooting)
-  xbeeCommands();
-  // Watchdog.reset();
+  LOG_STREAM.print(F(", "));
+  LOG_STREAM.print(aquaFluxId);
+#if USE_DATALOGGER
+  logfile.print(F(", "));
+  logfile.print(aquaFluxId);
 #endif
 
   // -----------------------------------------------------------------------------
