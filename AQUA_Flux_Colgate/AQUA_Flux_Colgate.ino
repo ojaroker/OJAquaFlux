@@ -54,6 +54,11 @@ SoftwareSerial XBee(2, 3); // Arduino RX, TX (XBee Dout, Din)
 #define K30_RELAY_PIN \
   11 // K30 turned on after delay to prevent spurious short-circuit fault
 
+// I2C bus configuration
+// Lower I2C clock to 50 kHz — more reliable on long wires than the 100 kHz default
+#define I2C_CLOCK_SPEED 50000UL
+#define I2C_TIMEOUT_MS 50UL // Timeout for I2C reads (prevents infinite loop if sensor stops clocking)
+
 // -----------------------------------------------------------------------------
 // SHT85 Humidity and Temperature Sensor Configuration
 // -----------------------------------------------------------------------------
@@ -193,6 +198,16 @@ void loop()
     return;
   }
 #endif //USE_ACTUATOR
+
+  // While suspended via the 'S' XBee command, skip all sensor reads and delays.
+  // Only process XBee commands so 'R' can be received to resume.
+#if USE_XBEE
+  if (xbeeSuspended)
+  {
+    xbeeCommands();
+    return;
+  }
+#endif
 
   // Process XBee commands before any delays so responses are near-instant.
   // A second call at the end of loop() handles commands that arrive during
@@ -341,8 +356,10 @@ void loop()
   logfile.println();
   // Write data to the SD card
   logfile.flush();
-  // Rotate to a new log file at midnight (date change)
-  if (now.day() != currentLogDay)
+  // Rotate to a new log file at midnight (date change).
+  // Guard with isRtcDateValid(): if the RTC returned garbage (e.g. day=45),
+  // skip rotation and continue logging to the already-open file
+  if (isRtcDateValid(now) && now.day() != currentLogDay)
   {
     rotateLogfile();
   }

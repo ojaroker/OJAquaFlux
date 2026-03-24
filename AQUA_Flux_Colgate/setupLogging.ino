@@ -26,6 +26,7 @@ void error(char *str) // Halt if error
 }
 
 #if USE_DATALOGGER
+
 // Opens YYYYMMDD.CSV for today's date (appends if it already exists, e.g. same-day
 // reboot). Writes the CSV header only for new files. Calls error() on failure.
 void openNextLogfile()
@@ -38,9 +39,7 @@ void openNextLogfile()
   bool isNewFile = !SD.exists(filename);
   logfile = SD.open(filename, FILE_WRITE); // FILE_WRITE appends if file exists
   if (!logfile)
-  {
     error("Couldn't create file");
-  }
 
   currentLogDay = now.day();
   DEBUG_PRINT(F("Logging to: "));
@@ -49,8 +48,6 @@ void openNextLogfile()
   if (isNewFile)
   {
     // Write header only once per file; skip on same-day reboot (append mode)
-    // List of data products: (1) milliseconds since Arduino was powered, (2) unique Unix stamp, (3) date and time, (4) [CO2] (ppm), (5) CH4 sensor output (mV),
-    // (6) reference circuit output (mV), (7) relative humidity (%), (8) air temperature inside chamber (C), (9) AQUA-Flux ID
     logfile.println(F("millis, stampunix, datetime, K30_CO2, CH4smV, Vbat, SHT_RH, SHT_temp, AQUA_Flux1"));
   }
 }
@@ -89,20 +86,23 @@ void setupLogging(void)
   if (!rtc.initialized() || rtc.lostPower())
   {
     LOG_STREAM.println(F("RTC is NOT initialized. Time Must Be Set"));
-    // When time needs to be set on a new device, or after a power loss, the
-    // following line sets the RTC to the date & time this sketch was compiled
-    // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-    // This line sets the RTC with an explicit date & time, for example to set
-    // January 21, 2014 at 3am you would call:
-    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
-    //
-    // Note: allow 2 seconds after inserting battery or applying external power
-    // without battery before calling adjust(). This gives the PCF8523's
-    // crystal oscillator time to stabilize. If you call adjust() very quickly
-    // after the RTC is powered, lostPower() may still return true.
+    setRtcDate();
   }
 
   rtc.start(); // start the RTC
+
+  // Validate the RTC date before opening any log file.
+  // An implausible date (such as in the past) indicates a problem
+  // Request operator enter a valid date and then reboot
+  {
+    DateTime rtcNow = rtc.now();
+    if (!isRtcDateValid(rtcNow))
+    {
+      LOG_STREAM.println(F("The RTC has an implausible date. Reset date and reboot."));
+      setRtcDate();
+      error("Reboot to confirm RTC will maintain the correct date.");
+    }
+  }
 
   // int countdownMS = Watchdog.enable(8000); // enable watchdog with timer of 8 seconds (max for Arduino Uno) - if the Arduino halts for more than 8 seconds, the watchdog will restart the sketch
 

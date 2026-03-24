@@ -40,6 +40,7 @@ void printConfig()
 #if USE_XBEE
   LOG_STREAM.print(F("  XBee baud:   "));
   LOG_STREAM.println(XBEE_BAUD_RATE);
+  xbeeHelp(); // Show available commands
 #endif
   LOG_STREAM.println(F("==========================="));
 
