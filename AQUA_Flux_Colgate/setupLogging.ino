@@ -49,6 +49,7 @@ void openNextLogfile()
   {
     // Write header only once per file; skip on same-day reboot (append mode)
     logfile.println(F("millis, stampunix, datetime, K30_CO2, CH4smV, Vbat, SHT_RH, SHT_temp, AQUA_Flux1"));
+    logfile.flush(); // persist header immediately — first data row may not arrive for >30 s
   }
 }
 
@@ -116,6 +117,8 @@ void setupLogging(void)
   {
     error("Card failed or not present");
   }
+  // Validate SD Card by writing a test file
+  testSdCard();
   DEBUG_PRINTLN(F("card initialized."));
 
   openNextLogfile();
