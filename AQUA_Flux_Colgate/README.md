@@ -28,6 +28,6 @@ The following software and hardware modifications were made to the original desi
 - **Startup Configuration Report** (`printConfig.ino`): A `printConfig()` function called from `setup()` prints the enabled/disabled status of all subsystems and the Arduino pin assignments to `LOG_STREAM`, making it easy to verify the build configuration in the field.
 
 ## Technical References
-- Bastviken, D., et al. (2020). "AQUA-Flux: A floating chamber system for measuring greenhouse gas fluxes at the air-water interface in aquatic environments." Methods in Ecology and Evolution 11(2): 276-287.
 - K30 CO₂ Sensor Datasheet: https://rmtplusstoragesenseair.blob.core.windows.net/docs/Dev/publicerat/TDE4700.pdf
+- K30 CO₂ Sensor Product Specification: https://rmtplusstoragesenseair.blob.core.windows.net/docs/publicerat/PSP110.pdf
 - Renogy Wanderer Solar Panel: https://www.renogy.com/products/wanderer-10a-pwm-charge-controller?_pos=1&_psq=wande&_ss=e&_v=1.0
