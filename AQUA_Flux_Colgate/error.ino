@@ -6,7 +6,7 @@
 // Called throughout the sketch when an unrecoverable condition is detected
 // (e.g. SD card missing, RTC not found, SD read/write mismatch).
 
-void error(char *str)
+void error(const char *str)
 {
   LOG_STREAM.print(F("ERROR OCCURRED: "));
   LOG_STREAM.println(str);

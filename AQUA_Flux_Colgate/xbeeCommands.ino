@@ -31,6 +31,7 @@ void xbeeHelp()
 }
 
 // Prompt for a new unit ID (1-255) and update aquaFluxId.
+#if USE_XBEE
 static void setAquaFluxId()
 {
     LOG_STREAM.print(F("Current ID: "));
@@ -118,6 +119,7 @@ static void setLogInterval()
     LOG_STREAM.print(val);
     LOG_STREAM.println(F(" s"));
 }
+#endif // USE_XBEE
 
 void xbeeCommands()
 {
