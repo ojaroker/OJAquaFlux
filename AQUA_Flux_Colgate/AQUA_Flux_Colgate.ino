@@ -49,15 +49,15 @@ SoftwareSerial XBee(2, 3); // Arduino RX, TX (XBee Dout, Din)
 #endif
 // Pin D4 - Linear Actuator control
 #define ACTUATOR_PIN 4
-// Pins D5, D6 - UNUSED - reserved for future use
+// Pin D5 UNUSED - reserved for future use
+// Pin D6 - K30 Power-interrupting Relay
+#define K30_RELAY_PIN 6 // K30 turned on after delay to prevent spurious short-circuit fault
 // Pin D7 - Solenoid control
 #define SOLENOID_PIN 7
 // Pins D8, D9 - UNUSED - reserved for future use
 // Pin D10 - SPI Chip Select
 #define SD_CARD_CS 10 // Chip Select for data logging SD card
-// Pin D11 - K30 Power-interrupting Relay
-#define K30_RELAY_PIN \
-  11 // K30 turned on after delay to prevent spurious short-circuit fault
+// Pins D11, D12, D13 - SPI Communication with SD Card - DO NOT USE
 
 // I2C bus configuration
 // Lower I2C clock to 50 kHz — more reliable on long wires than the 100 kHz default
@@ -186,6 +186,17 @@ void setup(void)
 #else
   DEBUG_PRINTLN(F("DEBUG - Linear actuator disabled"));
 #endif
+
+#if USE_XBEE
+  // Drain any bytes that arrived on the XBee RX line during setup.
+  // The XBee DOUT line can be transiently LOW while the module initializes,
+  // producing garbage bytes in the SoftwareSerial buffer. Without the K30
+  // startup delay (USE_K30=0), setup completes before XBee has settled,
+  // and a spurious 'S' byte would trigger the suspend handler on the first
+  // interruptibleWait() call — closing the logfile before any data is written.
+  while (XBee.available()) XBee.read();
+#endif
+
   }
 
 ///////////////////////////////////////////////////////////////////

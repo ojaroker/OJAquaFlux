@@ -7,26 +7,30 @@
 
 void setupK30()
 {
-#if USE_K30
+#if HAS_K30_RELAY
+  // Always configure the relay pin as OUTPUT so it doesn't float.
+  DEBUG_PRINTLN(F("DEBUG - Setting "));
+  pinMode(K30_RELAY_PIN, OUTPUT);
+  digitalWrite(K30_RELAY_PIN, LOW);
+#endif
 
+#if USE_K30
   DEBUG_PRINTLN(F("DEBUG - K30 CO2 sensor enabled"));
 
 #if HAS_K30_RELAY
-    // Power on K30
+  // Power on K30
   DEBUG_PRINT(F("DEBUG - Turning on K30..."));
-    delay(K30_STARTUP_DELAY); // Wait for K30 to boot up
-    pinMode(K30_RELAY_PIN, OUTPUT);
-    digitalWrite(K30_RELAY_PIN, HIGH);
-    delay(2000); // Wait for K30 to boot up
-
+  delay(K30_STARTUP_DELAY); // Wait for K30 to boot up
+  digitalWrite(K30_RELAY_PIN, HIGH);
+  delay(2000); // Wait for K30 to boot up
   DEBUG_PRINTLN(F("Done"));
 
 #endif // HAS_K30_RELAY
 
-    // TODO - Check "Error Status" at 0x1E (See section 8 of data sheet)
-    // to detect sensor faults before continuing
-    // K30 needs 60 seconds to boot up
-    // K30 readings need 15 minutes to stabilize; discard first 15 minutes
+  // TODO - Check "Error Status" at 0x1E (See section 8 of data sheet)
+  // to detect sensor faults before continuing
+  // K30 needs 60 seconds to boot up
+  // K30 readings need 15 minutes to stabilize; discard first 15 minutes
 
 #else
 
