@@ -68,12 +68,7 @@ static bool rtcAllDigits(const char *buf, uint8_t len)
 // corrupt data over I2C.
 bool isRtcDateValid(const DateTime &dt)
 {
-  return dt.year()   >= 2026 && dt.year()   <= 2040
-      && dt.month()  >= 1    && dt.month()  <= 12
-      && dt.day()    >= 1    && dt.day()    <= 31
-      && dt.hour()   <= 23
-      && dt.minute() <= 59
-      && dt.second() <= 59;
+  return dt.year() >= 2026 && dt.year() <= 2040 && dt.month() >= 1 && dt.month() <= 12 && dt.day() >= 1 && dt.day() <= 31 && dt.hour() <= 23 && dt.minute() <= 59 && dt.second() <= 59;
 }
 
 // Prompt the operator for a date and time, write to RTC, and verify.
@@ -90,7 +85,7 @@ void setRtcDate()
   bool gotDate = false;
   for (uint8_t attempt = 0; attempt < SET_RTC_MAX_ATTEMPTS && !gotDate; attempt++)
   {
-    LOG_STREAM.println(F("Enter date (YYYYMMDD, 24-hour UTC):"));
+    LOG_STREAM.println(F("Enter date (YYYYMMDD):"));
     uint8_t len = rtcReadLine(dateBuf, 8);
     if (len == 8 && rtcAllDigits(dateBuf, 8))
       gotDate = true;
@@ -107,7 +102,7 @@ void setRtcDate()
   bool gotTime = false;
   for (uint8_t attempt = 0; attempt < SET_RTC_MAX_ATTEMPTS && !gotTime; attempt++)
   {
-    LOG_STREAM.println(F("Enter time (HHMMSS, 24-hour UTC):"));
+    LOG_STREAM.println(F("Enter time (HHMMSS):"));
     uint8_t len = rtcReadLine(timeBuf, 6);
     if (len == 6 && rtcAllDigits(timeBuf, 6))
       gotTime = true;
