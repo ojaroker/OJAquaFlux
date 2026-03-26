@@ -9,21 +9,9 @@
 //      or file cannot be opened.
 //
 // Functions:
-//   error()          - print error message, flush, and halt (manual reboot required)
 //   openNextLogfile() - open or append to today's YYYYMMDD.CSV; write header if new
-//   rotateLogfile()  - flush/close current file and open the next (called at midnight)
-//   setupLogging()   - called once from setup(); initialises serial, RTC, and SD card
-
-void error(char *str) // Halt if error
-{
-  LOG_STREAM.print(F("ERROR OCCURRED: "));
-  LOG_STREAM.println(str);
-  LOG_STREAM.println(F("Execution halted. Please reboot manually."));
-  // Flush serial and clear the receive buffer if Xbee (which is a no-op)
-  LOG_STREAM.flush();
-  while (1)
-    ; // Halt
-}
+//   rotateLogfile()   - flush/close current file and open the next (called at midnight)
+//   setupLogging()    - called once from setup(); initialises serial, RTC, and SD card
 
 #if USE_DATALOGGER
 

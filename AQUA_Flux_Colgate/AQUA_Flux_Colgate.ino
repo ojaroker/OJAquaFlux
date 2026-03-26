@@ -26,6 +26,10 @@
 #define USE_TEMP 0       // 0 - No temperature sensor, 1 - Use thermistor for temperature measurements
 #define HAS_K30_RELAY 1  // 0 - K30 hardwired to 12VDC, 1 - Relay used to turn on K30
 
+// -----------------------------------------------------------------------------
+// AQUA-Flux Control
+// -----------------------------------------------------------------------------
+
 // Milliseconds between sensor measurements.
 // Minimum: 3 seconds, limited by K30 measurment period
 // Maximum: Determined by CHAMBER_CLOSED_MS
@@ -63,6 +67,13 @@ SoftwareSerial XBee(2, 3); // Arduino RX, TX (XBee Dout, Din)
 // Lower I2C clock to 50 kHz — more reliable on long wires than the 100 kHz default
 #define I2C_CLOCK_SPEED 50000UL
 #define I2C_TIMEOUT_MS 50UL // Timeout for I2C reads (prevents infinite loop if sensor stops clocking)
+
+// -----------------------------------------------------------------------------
+// K30 CO2 Sensor Configuration
+// -----------------------------------------------------------------------------
+// Address (Default: 0x68, Any Sensor: 0x7F)
+// WARNING: Changed 0x68 to 0x69 to avoid conflict with the data logger RTC
+#define K30_I2C_ADDR 0x69
 
 // -----------------------------------------------------------------------------
 // SHT85 Humidity and Temperature Sensor Configuration
@@ -175,28 +186,23 @@ ChamberActuator chamberActuator; // state machine instance
 ///////////////////////////////////////////////////////////////////
 void setup(void)
 {
-  setupLogging(); // Initialize XBee or Serial communication, RTC, Datalogger
-  printConfig();
-  setupI2c();
-  setupK30();
-  scanI2cBus();
-  setupSht85();
+  setupLogging();           // Initialize XBee or Serial communication, RTC, Datalogger
+  printConfig();            // Shows XBee commands
+  activateK30();            // Delayed K30 activation using relay
+  setupI2c();               // Turns on I2C and puts it into a known starting state
+  setupK30();               // Checks K30 for errors and non-conflicting I2C address
+  scanI2cBus();             // Scan and report all I2C devices
+  setupSht85();             // Start temp/humidity sensor
 #if USE_ACTUATOR
-  chamberActuator.begin();
+  chamberActuator.begin();  // Put chamber into known state (down)
 #else
   DEBUG_PRINTLN(F("DEBUG - Linear actuator disabled"));
 #endif
 
 #if USE_XBEE
   // Drain any bytes that arrived on the XBee RX line during setup.
-  // The XBee DOUT line can be transiently LOW while the module initializes,
-  // producing garbage bytes in the SoftwareSerial buffer. Without the K30
-  // startup delay (USE_K30=0), setup completes before XBee has settled,
-  // and a spurious 'S' byte would trigger the suspend handler on the first
-  // interruptibleWait() call — closing the logfile before any data is written.
   while (XBee.available()) XBee.read();
 #endif
-
   }
 
 ///////////////////////////////////////////////////////////////////

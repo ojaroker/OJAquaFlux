@@ -12,6 +12,7 @@ The following software and hardware modifications were made to the original desi
 - [Level Shifter](./design_files/LevelShifter.md): Added a level shifter to interface the 3.3V sensors with the 5V microcontroller, ensuring proper communication and preventing damage to components.
 - **Header Pins**: Only use the header pins, not the board's factory side-connector, to connect the K30 sensor, ensuring a more stable and direct connection for data communication.
 - **I²C Address**: Changed the default I²C address of the K30 sensor to 0x69 to avoid conflict with the Real Time Clock (RTC) module, which typically uses 0x68. This allows both devices to coexist on the same I²C bus without address conflicts.
+- [Error Handling](./design_files/K30.md): To improve reliability, several software improvements were added to the K30's startup and operation.
 
 ### Renogy Wanderer Solar Panel Integration
 - [Power Relay](./design_files/PowerRelay.md): Integrated a relay to control power to the K30 CO₂ sensor, allowing it to be powered up after Arduino bootup to prevent spurious short-circuit issues "E04".
@@ -27,6 +28,6 @@ The following software and hardware modifications were made to the original desi
 - **Startup Configuration Report** (`printConfig.ino`): A `printConfig()` function called from `setup()` prints the enabled/disabled status of all subsystems and the Arduino pin assignments to `LOG_STREAM`, making it easy to verify the build configuration in the field.
 
 ## Technical References
-- Bastviken, D., et al. (2020). "AQUA-Flux: A floating chamber system for measuring greenhouse gas fluxes at the air-water interface in aquatic environments." Methods in Ecology and Evolution 11(2): 276-287.
 - K30 CO₂ Sensor Datasheet: https://rmtplusstoragesenseair.blob.core.windows.net/docs/Dev/publicerat/TDE4700.pdf
+- K30 CO₂ Sensor Product Specification: https://rmtplusstoragesenseair.blob.core.windows.net/docs/publicerat/PSP110.pdf
 - Renogy Wanderer Solar Panel: https://www.renogy.com/products/wanderer-10a-pwm-charge-controller?_pos=1&_psq=wande&_ss=e&_v=1.0
