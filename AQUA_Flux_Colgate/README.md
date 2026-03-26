@@ -6,8 +6,8 @@ This setup logs data to SD card, transmits via XBee for remote access, controls 
 
 ## Usage Instructions
 
-[xBee Commands](./design_files/xbee_commands.md)
-[Software Activity](./design_files/activity.md)
+- [xBee Commands](./design_files/xbee_commands.md)
+- [Software Activity](./design_files/activity.md)
 
 ## Modifications to Original Design - March 2026
 
