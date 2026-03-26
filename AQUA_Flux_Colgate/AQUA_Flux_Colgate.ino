@@ -57,7 +57,7 @@ SoftwareSerial XBee(2, 3); // Arduino RX, TX (XBee Dout, Din)
 // Pins D8, D9 - UNUSED - reserved for future use
 // Pin D10 - SPI Chip Select
 #define SD_CARD_CS 10 // Chip Select for data logging SD card
-// Pin D11 - SPI - Conflicts with SD card
+// Pins D11, D12, D13 - SPI Communication with SD Card - DO NOT USE
 
 // I2C bus configuration
 // Lower I2C clock to 50 kHz — more reliable on long wires than the 100 kHz default
