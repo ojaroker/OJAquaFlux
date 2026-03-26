@@ -5,10 +5,6 @@
 // Error handling and expected behavior is designed according to Sensair data sheet:
 // https://rmtplusstoragesenseair.blob.core.windows.net/docs/Dev/publicerat/TDE4700.pdf
 
-// K30 configuration
-// Changed from 0x68 to 0x69 to avoid conflict with the data logger
-#define K30_I2C_ADDR 0x69 // K30 default 7-bit address: 0x68; Any Sensor address: 0x7F
-
 // Datasheet Timing Constants
 #define CMD_DELAY_MS 20     // K30 datasheet: ≥20 ms after write
 #define RETRY_BACKOFF_MS 50 // extra wait between retries

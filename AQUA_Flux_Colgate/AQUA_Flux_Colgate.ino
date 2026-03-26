@@ -26,6 +26,10 @@
 #define USE_TEMP 0       // 0 - No temperature sensor, 1 - Use thermistor for temperature measurements
 #define HAS_K30_RELAY 1  // 0 - K30 hardwired to 12VDC, 1 - Relay used to turn on K30
 
+// -----------------------------------------------------------------------------
+// AQUA-Flux Control
+// -----------------------------------------------------------------------------
+
 // Milliseconds between sensor measurements.
 // Minimum: 3 seconds, limited by K30 measurment period
 // Maximum: Determined by CHAMBER_CLOSED_MS
@@ -63,6 +67,13 @@ SoftwareSerial XBee(2, 3); // Arduino RX, TX (XBee Dout, Din)
 // Lower I2C clock to 50 kHz — more reliable on long wires than the 100 kHz default
 #define I2C_CLOCK_SPEED 50000UL
 #define I2C_TIMEOUT_MS 50UL // Timeout for I2C reads (prevents infinite loop if sensor stops clocking)
+
+// -----------------------------------------------------------------------------
+// K30 CO2 Sensor Configuration
+// -----------------------------------------------------------------------------
+// Address (Default: 0x68, Any Sensor: 0x7F)
+// WARNING: Changed 0x68 to 0x69 to avoid conflict with the data logger RTC
+#define K30_I2C_ADDR 0x69
 
 // -----------------------------------------------------------------------------
 // SHT85 Humidity and Temperature Sensor Configuration
