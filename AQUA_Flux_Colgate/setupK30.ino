@@ -1,49 +1,22 @@
 // setupK30.ino
 //
-// K30 CO2 sensor setup: relay control, I2C address verification/change,
-// and error status check.
+// K30 CO2 sensor setup: I2C address verification/change and error status check
 //
 // Static helpers (USE_K30 only):
 //   k30ReadRAM()       — shared Wire read-RAM protocol
 //   k30WriteEEPROM()   — shared Wire write-EEPROM protocol (for address change)
-//   k30RelayOn/Off()   — relay power control (HAS_K30_RELAY only)
 //   readK30I2CAddress()  — read configured address from RAM 0x0020 via 0x7F
 //   ensureK30Address()   — verify address == K30_I2C_ADDR; write + power-cycle if not
 //   checkK30ErrorStatus() — read error status register (RAM 0x1E); halt on fatal bits
 //
 // Reference: SenseAir K30 datasheet TDE4700, PSP110
 
-#define K30_STARTUP_DELAY 5000  // ms after Arduino boot before powering K30
-#define K30_BOOT_DELAY_MS 2000  // ms after relay HIGH before sensor is ready
-#define K30_POWER_DOWN_MS 10000 // ms to wait after relay OFF before turning back on
+#define K30_POWER_DOWN_MS 10000UL // ms to wait after relay OFF before turning back on
 
 // Shared error message buffer used by all helpers below.
 #if USE_K30
 static char k30errbuf[64];
 #endif
-
-// ---------------------------------------------------------------------------
-// Relay helpers  (HAS_K30_RELAY only)
-// ---------------------------------------------------------------------------
-#if HAS_K30_RELAY
-
-// Drive relay HIGH.  startupDelayMs is waited before asserting HIGH so the
-// Arduino has time to stabilise on initial boot (pass 0 for mid-run cycles).
-static void k30RelayOn(unsigned long startupDelayMs = K30_STARTUP_DELAY)
-{
-  if (startupDelayMs > 0)
-    delay(startupDelayMs);
-  digitalWrite(K30_RELAY_PIN, HIGH);
-  delay(K30_BOOT_DELAY_MS); // allow K30 firmware to initialise
-}
-
-// Drive relay LOW immediately.
-static void k30RelayOff()
-{
-  digitalWrite(K30_RELAY_PIN, LOW);
-}
-
-#endif // HAS_K30_RELAY
 
 // ---------------------------------------------------------------------------
 // Wire primitives  (USE_K30 only)
@@ -276,25 +249,9 @@ static void checkK30ErrorStatus()
 // ---------------------------------------------------------------------------
 void setupK30()
 {
-#if HAS_K30_RELAY
-  // Always configure the relay pin as OUTPUT so it doesn't float.
-  pinMode(K30_RELAY_PIN, OUTPUT);
-  k30RelayOff();
-#endif
-
 #if USE_K30
-  DEBUG_PRINTLN(F("DEBUG - K30 CO2 sensor enabled"));
-
-#if HAS_K30_RELAY
-  DEBUG_PRINT(F("DEBUG - Turning on K30..."));
-  k30RelayOn(); // K30_STARTUP_DELAY + K30_BOOT_DELAY_MS
-  DEBUG_PRINTLN(F("Done"));
-#endif
-
   ensureK30Address();    // verify/set I2C address via 0x7F; power-cycle if needed
   checkK30ErrorStatus(); // confirm no fatal faults at the confirmed address
-  // Note: K30 readings need ~15 minutes to stabilize after power-on.
-
 #else
   DEBUG_PRINTLN(F("DEBUG - K30 CO2 sensor disabled"));
 #endif // USE_K30
