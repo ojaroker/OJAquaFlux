@@ -49,15 +49,15 @@ SoftwareSerial XBee(2, 3); // Arduino RX, TX (XBee Dout, Din)
 #endif
 // Pin D4 - Linear Actuator control
 #define ACTUATOR_PIN 4
-// Pins D5, D6 - UNUSED - reserved for future use
+// Pin D5 UNUSED - reserved for future use
+// Pin D6 - K30 Power-interrupting Relay
+#define K30_RELAY_PIN 6 // K30 turned on after delay to prevent spurious short-circuit fault
 // Pin D7 - Solenoid control
 #define SOLENOID_PIN 7
 // Pins D8, D9 - UNUSED - reserved for future use
 // Pin D10 - SPI Chip Select
 #define SD_CARD_CS 10 // Chip Select for data logging SD card
-// Pin D11 - K30 Power-interrupting Relay
-#define K30_RELAY_PIN \
-  11 // K30 turned on after delay to prevent spurious short-circuit fault
+// Pin D11 - SPI - Conflicts with SD card
 
 // I2C bus configuration
 // Lower I2C clock to 50 kHz — more reliable on long wires than the 100 kHz default
