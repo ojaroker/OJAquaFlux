@@ -4,6 +4,11 @@ AQUA-Flux floating/autonomous chamber system designed to measure greenhouse gas 
 
 This setup logs data to SD card, transmits via XBee for remote access, controls a chamber lid via linear actuator (to periodically open for ambient air exchange and close for flux accumulation), reads multiple sensors, and includes basic error recovery for the I²C bus.
 
+## Usage Instructions
+
+- [xBee Commands](./design_files/xbee_commands.md)
+- [Software Activity](./design_files/activity.md)
+
 ## Modifications to Original Design - March 2026
 
 The following software and hardware modifications were made to the original design to address issues encountered during testing and deployment.
