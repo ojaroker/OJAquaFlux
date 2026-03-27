@@ -39,9 +39,18 @@ static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr, uint16_t &value)
   cmd[2] = ramAddr & 0xFF;
   cmd[3] = cmd[0] + cmd[1] + cmd[2];
 
+  DEBUG_PRINT(F("Sending K30 Read RAM(0x"));
+  DEBUG_PRINT(i2cAddr);
+  DEBUG_PRINT(F("): { "));
   Wire.beginTransmission(i2cAddr);
   for (uint8_t i = 0; i < sizeof(cmd); i++)
+  {
+    DEBUG_PRINT(String(cmd[i], HEX));
+    DEBUG_PRINT(F(" "));
     Wire.write(cmd[i]);
+  }
+  DEBUG_PRINTLN(F("}"));
+
   byte err = Wire.endTransmission();
   if (err != 0)
   {
@@ -100,10 +109,10 @@ static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr, uint16_t &value)
 static void k30WriteEEPROM(uint8_t i2cAddr, uint16_t eepromAddr, uint8_t val)
 {
   byte cmd[5];
-  cmd[0] = 0x31;                               // Write EEPROM, 1 data byte (TDE4700)
-  cmd[1] = (eepromAddr >> 8) & 0xFF;           // address MSB
-  cmd[2] = eepromAddr & 0xFF;                  // address LSB
-  cmd[3] = val;                                // data byte
+  cmd[0] = 0x31;                              // Write EEPROM, 1 data byte (TDE4700)
+  cmd[1] = (eepromAddr >> 8) & 0xFF;          // address MSB
+  cmd[2] = eepromAddr & 0xFF;                 // address LSB
+  cmd[3] = val;                               // data byte
   cmd[4] = cmd[0] + cmd[1] + cmd[2] + cmd[3]; // checksum
 
   Wire.beginTransmission(i2cAddr);
@@ -133,7 +142,7 @@ static void k30WriteEEPROM(uint8_t i2cAddr, uint16_t eepromAddr, uint8_t val)
              "K30 writeEEPROM 0x%04X: response expected 2 bytes, got %d", eepromAddr, received);
     error(k30errbuf);
   }
-  byte status   = Wire.read();
+  byte status = Wire.read();
   byte respCsum = Wire.read();
   (void)respCsum; // checksum of a single byte equals itself; no separate validation needed
   if (status != 0x31)
