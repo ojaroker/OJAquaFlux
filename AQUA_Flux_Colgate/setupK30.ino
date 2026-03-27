@@ -99,6 +99,10 @@ static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr, uint16_t &value)
       error(k30errbuf);
     }
 
+    uint8_t buf[4];
+    for (uint8_t i = 0; i < 4; i++)
+      buf[i] = Wire.read();
+
     // Check for stray data on i2c
     DEBUG_PRINT(F("Checking for more data on I2C Bus..."));
     while (Wire.available())
