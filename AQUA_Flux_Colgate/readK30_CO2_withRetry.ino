@@ -1,3 +1,9 @@
+// TODO
+// Refactor readK30_CO2_withRetry()
+// Rename to readK30_CO2()
+// Call helper uint16_t function readK30Ram_withRetry(uint8_t i2cAddr, uint16_t ramAddr)
+//
+
 // Arduino sketch for reading Sensair K30 CO2 sensor over I2C and sending data via XBee
 // or Serial. Includes a retry mechanism and bus recovery to handle common I2C issues
 // with the K30 when used with long wires or in electrically noisy environments.
