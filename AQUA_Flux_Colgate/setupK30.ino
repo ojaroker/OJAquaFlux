@@ -105,7 +105,7 @@ static void k30WriteEEPROM(uint8_t i2cAddr, uint16_t eepromAddr, uint8_t val)
   for (uint8_t i = 0; i < sizeof(cmd); i++)
   {
     Wire.write(cmd[i]);
-    DEBUG_PRINT(cmd[i], HEX);
+    DEBUG_PRINT(String(cmd[i], HEX));
     DEBUG_PRINT(F(" "));
   }
   DEBUG_PRINTLN(F("}"));
