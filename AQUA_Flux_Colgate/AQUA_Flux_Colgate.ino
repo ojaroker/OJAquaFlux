@@ -73,7 +73,7 @@ SoftwareSerial XBee(2, 3); // Arduino RX, TX (XBee Dout, Din)
 // -----------------------------------------------------------------------------
 // Address (Default: 0x68, Any Sensor: 0x7F)
 // WARNING: Changed 0x68 to 0x69 to avoid conflict with the data logger RTC
-#define K30_I2C_ADDR 0x69
+#define K30_I2C_ADDR 0x7F // 0x69
 
 // -----------------------------------------------------------------------------
 // SHT85 Humidity and Temperature Sensor Configuration
