@@ -190,7 +190,11 @@ static bool ensureK30Address()
   k30RelayOn(0); // no extra startup delay — Arduino is already stable
   LOG_STREAM.println(F("done"));
 
-  cur = readK30I2CAddress();
+  // Use K30_I2C_ADDR directly — 0x7F after a write/reboot returns a stale
+  // Write EEPROM response (0x31) instead of a fresh Read RAM response.
+  uint16_t addrVal = 0;
+  k30ReadRAM(K30_I2C_ADDR, 0x0020, addrVal);
+  cur = (uint8_t)(addrVal & 0xFF);
   if (cur != K30_I2C_ADDR)
   { // ERROR - Address not set
     snprintf(k30errbuf, sizeof(k30errbuf),
@@ -212,13 +216,13 @@ static bool ensureK30Address()
 // Error status check
 // ---------------------------------------------------------------------------
 
-// Reads the K30 error status register (RAM 0x1E)
-// Uses 0x7F so this works regardless of the sensor's current address.
+// Reads the K30 error status register (RAM 0x1E).
+// Uses K30_I2C_ADDR — called after ensureK30Address() has confirmed the address.
 // Logs a human-readable report. Halts on any set bit (all indicate sensor fault).
 static bool checkK30ErrorStatus()
 {
   uint16_t status = 0;
-  k30ReadRAM(0x7F, 0x001E, status);
+  k30ReadRAM(K30_I2C_ADDR, 0x001E, status);
 
   LOG_STREAM.print(F("K30 error status (0x1E): 0x"));
   if (status < 0x1000)
