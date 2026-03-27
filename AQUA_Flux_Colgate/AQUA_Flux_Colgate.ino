@@ -73,7 +73,7 @@ SoftwareSerial XBee(2, 3); // Arduino RX, TX (XBee Dout, Din)
 // -----------------------------------------------------------------------------
 // Address (Default: 0x68, Any Sensor: 0x7F)
 // WARNING: Changed 0x68 to 0x69 to avoid conflict with the data logger RTC
-#define K30_I2C_ADDR 0x7F // 0x69
+#define K30_I2C_ADDR 0x69
 
 // -----------------------------------------------------------------------------
 // SHT85 Humidity and Temperature Sensor Configuration
@@ -190,7 +190,7 @@ void setup(void)
   printConfig();            // Shows XBee commands
   activateK30();            // Delayed K30 activation using relay
   setupI2c();               // Turns on I2C and puts it into a known starting state
-  // setupK30();               // Checks K30 for errors and non-conflicting I2C address
+  setupK30();               // Checks K30 for errors and non-conflicting I2C address
   scanI2cBus();             // Scan and report all I2C devices
   setupSht85();             // Start temp/humidity sensor
 #if USE_ACTUATOR

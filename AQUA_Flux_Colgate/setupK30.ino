@@ -81,23 +81,29 @@ static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr, uint16_t &value)
   value = ((uint16_t)buf[1] << 8) | buf[2];
 }
 
-// Send a Write-EEPROM command (TDE4700 Page 18, command 0x31) to set a 1-byte value.
-// NOTE: This function is limited to writing 1 byte only
-// `i2cAddr`    — target sensor (pass 0x7F for "any sensor").
-// `eepromAddr` — 16-bit K30 EEPROM address (e.g. 0x0000 = I2C slave address, page 19).
+// Send a Write-EEPROM command (TDE4700 Section 5.4) to set a 1-byte value, then
+// read back the 2-byte response to confirm the write completed.
+// NOTE: This function is limited to writing 1 byte only.
+// `i2cAddr`    — target sensor (pass 0x7F for "any sensor" on a point-to-point bus).
+// `eepromAddr` — 16-bit K30 EEPROM address (e.g. 0x0000 = I2C slave address, p.19).
 // `val`        — 1-byte value to write.
-// Calls error() and halts on transmission failure.
+// Calls error() and halts on transmission failure or if the sensor reports incomplete.
 //
-// Command format (5 bytes):
+// Request frame (5 bytes):
 //   0x31 | addrMSB | addrLSB | data | checksum
-// checksum = sum of first 4 bytes, truncated to 8 bits.
+//   0x31 = command nibble 0x3 (Write EE) | count nibble 0x1 (1 byte)
+//   checksum = sum of first 4 bytes, truncated to 8 bits
+//
+// Response frame (2 bytes, read after t_WAIT ≥ 20 ms):
+//   [0] status: 0x31 = write complete, 0x30 = write incomplete (sensor busy)
+//   [1] checksum = status byte
 static void k30WriteEEPROM(uint8_t i2cAddr, uint16_t eepromAddr, uint8_t val)
 {
   byte cmd[5];
-  cmd[0] = 0x31;                              // Write EEPROM, 1 data byte (TDE4700)
-  cmd[1] = (eepromAddr >> 8) & 0xFF;          // address MSB
-  cmd[2] = eepromAddr & 0xFF;                 // address LSB
-  cmd[3] = val;                               // data byte
+  cmd[0] = 0x31;                               // Write EEPROM, 1 data byte (TDE4700)
+  cmd[1] = (eepromAddr >> 8) & 0xFF;           // address MSB
+  cmd[2] = eepromAddr & 0xFF;                  // address LSB
+  cmd[3] = val;                                // data byte
   cmd[4] = cmd[0] + cmd[1] + cmd[2] + cmd[3]; // checksum
 
   Wire.beginTransmission(i2cAddr);
@@ -116,6 +122,27 @@ static void k30WriteEEPROM(uint8_t i2cAddr, uint16_t eepromAddr, uint8_t val)
              "K30 writeEEPROM 0x%04X: transmission error %d", eepromAddr, err);
     error(k30errbuf);
   }
+
+  delay(20); // t_WAIT: sensor commits EEPROM write during this window (TDE4700 Table 6)
+
+  // Read 2-byte response: [status, checksum]
+  byte received = Wire.requestFrom(i2cAddr, (uint8_t)2);
+  if (received != 2)
+  {
+    snprintf(k30errbuf, sizeof(k30errbuf),
+             "K30 writeEEPROM 0x%04X: response expected 2 bytes, got %d", eepromAddr, received);
+    error(k30errbuf);
+  }
+  byte status   = Wire.read();
+  byte respCsum = Wire.read();
+  (void)respCsum; // checksum of a single byte equals itself; no separate validation needed
+  if (status != 0x31)
+  {
+    snprintf(k30errbuf, sizeof(k30errbuf),
+             "K30 writeEEPROM 0x%04X: write incomplete, status 0x%02X", eepromAddr, status);
+    error(k30errbuf);
+  }
+  DEBUG_PRINTLN(F("K30 EEPROM write complete"));
 }
 
 // ---------------------------------------------------------------------------
