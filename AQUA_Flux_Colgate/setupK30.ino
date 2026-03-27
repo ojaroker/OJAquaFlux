@@ -35,7 +35,7 @@ static char k30errbuf[64];
 // address change, which clears on retry.
 // Calls error() and halts on transmission errors, byte-count mismatches,
 // checksum failures, or if all retries are exhausted.
-#define K30_READ_RAM_RETRIES       3
+#define K30_READ_RAM_RETRIES 3
 #define K30_READ_RAM_RETRY_DELAY_MS 100
 
 static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr, uint16_t &value)
@@ -220,6 +220,9 @@ static bool ensureK30Address()
   LOG_STREAM.println(F("Writing new address to K30 EEPROM..."));
 
   k30WriteEEPROM(0x7F, 0x0000, K30_I2C_ADDR);
+  DEBUG_PRINT(F("Waiting for EEPROM to Finish Writing..."));
+  delay(1000); // allow physical EEPROM write to complete before cutting power
+  DEBUG_PRINTLN(F("Done"));
 
 #if HAS_K30_RELAY
   LOG_STREAM.print(F("Power cycling K30 to apply address change..."));
@@ -227,6 +230,9 @@ static bool ensureK30Address()
   delay(K30_POWER_DOWN_MS);
   k30RelayOn(0); // no extra startup delay — Arduino is already stable
   LOG_STREAM.println(F("done"));
+
+  DEBUG_PRINTLN(F("Scanning I2C Bus"));
+  scanI2cBus();
 
   // Use K30_I2C_ADDR directly — 0x7F after a write/reboot returns a stale
   // Write EEPROM response (0x31) instead of a fresh Read RAM response.
