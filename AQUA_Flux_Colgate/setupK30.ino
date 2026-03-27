@@ -30,78 +30,93 @@ static char k30errbuf[64];
 // Send a Read-RAM command and return the 2-byte result in `value`.
 // NOTE: This is hard coded to read 2 byte only (command 0x22, TDE4700)
 // Uses the K30 I2C address in `i2cAddr` (pass 0x7F for "any sensor").
-// Calls error() and halts on any protocol failure.
+// Retries up to K30_READ_RAM_RETRIES times on unexpected status bytes — the K30
+// can return a stale Write EEPROM response (0x31) on the first read after an
+// address change, which clears on retry.
+// Calls error() and halts on transmission errors, byte-count mismatches,
+// checksum failures, or if all retries are exhausted.
+#define K30_READ_RAM_RETRIES       3
+#define K30_READ_RAM_RETRY_DELAY_MS 100
+
 static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr, uint16_t &value)
 {
   byte cmd[4];
-  cmd[0] = 0x22; // Read RAM, 2 data byte (TDE4700)
+  cmd[0] = 0x22; // Read RAM, 2 data bytes (TDE4700)
   cmd[1] = (ramAddr >> 8) & 0xFF;
   cmd[2] = ramAddr & 0xFF;
   cmd[3] = cmd[0] + cmd[1] + cmd[2];
 
-  DEBUG_PRINT(F("Sending K30 Read RAM(0x"));
-  DEBUG_PRINT(String(i2cAddr, HEX));
-  DEBUG_PRINT(F("): { "));
-  Wire.beginTransmission(i2cAddr);
-  for (uint8_t i = 0; i < sizeof(cmd); i++)
+  for (uint8_t attempt = 0; attempt < K30_READ_RAM_RETRIES; attempt++)
   {
-    DEBUG_PRINT(String(cmd[i], HEX));
-    DEBUG_PRINT(F(" "));
-    Wire.write(cmd[i]);
+    if (attempt > 0)
+      delay(K30_READ_RAM_RETRY_DELAY_MS);
+
+    DEBUG_PRINT(F("Sending K30 Read RAM(0x"));
+    DEBUG_PRINT(String(i2cAddr, HEX));
+    DEBUG_PRINT(F("): { "));
+    Wire.beginTransmission(i2cAddr);
+    for (uint8_t i = 0; i < sizeof(cmd); i++)
+    {
+      DEBUG_PRINT(String(cmd[i], HEX));
+      DEBUG_PRINT(F(" "));
+      Wire.write(cmd[i]);
+    }
+    DEBUG_PRINTLN(F("}"));
+
+    byte err = Wire.endTransmission();
+    if (err != 0)
+    {
+      snprintf(k30errbuf, sizeof(k30errbuf),
+               "K30 readRAM 0x%04X: transmission error %d", ramAddr, err);
+      error(k30errbuf);
+    }
+
+    // The K30 datasheet specifies ≥20 ms for the sensor to finish writing
+    // the result to RAM before you read it back.
+    delay(30);
+
+    //
+    // K30 Response
+    //
+    // Expect 4 Bytes (Section 5.3 Read Ram)
+    //  Byte 1 - Status (0x21 "Read Complete" or 0x20 "Read Incomplete")
+    //  Byte 2-3 - Data (MSB + LSB)
+    //  Byte 4 - Checksum
+
+    uint8_t received = Wire.requestFrom(i2cAddr, (uint8_t)4);
+    if (received != 4)
+    {
+      snprintf(k30errbuf, sizeof(k30errbuf),
+               "K30 readRAM 0x%04X: expected 4 bytes, got %d", ramAddr, received);
+      error(k30errbuf);
+    }
+
+    uint8_t buf[4];
+    for (uint8_t i = 0; i < 4; i++)
+      buf[i] = Wire.read();
+
+    if (buf[0] != 0x21)
+    {
+      DEBUG_PRINT(F("K30 readRAM unexpected status 0x"));
+      DEBUG_PRINT(String(buf[0], HEX));
+      DEBUG_PRINTLN(F(", retrying..."));
+      continue; // retry — K30 may return stale EEPROM response (0x31) after address change
+    }
+
+    if ((byte)(buf[0] + buf[1] + buf[2]) != buf[3])
+    {
+      snprintf(k30errbuf, sizeof(k30errbuf),
+               "K30 readRAM 0x%04X: checksum fail", ramAddr);
+      error(k30errbuf);
+    }
+
+    value = ((uint16_t)buf[1] << 8) | buf[2];
+    return; // success
   }
-  DEBUG_PRINTLN(F("}"));
 
-  byte err = Wire.endTransmission();
-  if (err != 0)
-  {
-    snprintf(k30errbuf, sizeof(k30errbuf),
-             "K30 readRAM 0x%04X: transmission error %d", ramAddr, err);
-    error(k30errbuf);
-  }
-
-  // The K30 datasheet specifies ≥20 ms for the sensor to finish writing
-  // the result to RAM before you read it back. The original 10 ms caused
-  // intermittent checksum failures.
-  delay(30); // K30 datasheet: ≥20 ms after write before reading response
-
-  //
-  // K30 Response
-  //
-  // Expect 4 Bytes (Section 5.3 Read Ram)
-  //  Byte 1 - Status (0x21 "Read Complete" or 0x20 "Read Incomplete")
-  //  Byte 2-3 - Data (MSB + LSB)
-  //  Byte 4 - Checksum
-
-  // Fill wire buffer with response from K30
-  uint8_t received = Wire.requestFrom(i2cAddr, (uint8_t)4);
-
-  // Confirm we got 4 bytes back; if not, something went wrong at the I2C level.
-  if (received != 4)
-  {
-    snprintf(k30errbuf, sizeof(k30errbuf),
-             "K30 readRAM 0x%04X: expected 4 bytes, got %d", ramAddr, received);
-    error(k30errbuf);
-  }
-
-  uint8_t buf[4];
-  for (uint8_t i = 0; i < 4; i++)
-    buf[i] = Wire.read();
-
-  if (buf[0] != 0x21)
-  {
-    snprintf(k30errbuf, sizeof(k30errbuf),
-             "K30 readRAM 0x%04X: read incomplete, status 0x%02X", ramAddr, buf[0]);
-    error(k30errbuf);
-  }
-
-  if ((byte)(buf[0] + buf[1] + buf[2]) != buf[3])
-  {
-    snprintf(k30errbuf, sizeof(k30errbuf),
-             "K30 readRAM 0x%04X: checksum fail", ramAddr);
-    error(k30errbuf);
-  }
-
-  value = ((uint16_t)buf[1] << 8) | buf[2];
+  snprintf(k30errbuf, sizeof(k30errbuf),
+           "K30 readRAM 0x%04X: bad status after %d retries", ramAddr, K30_READ_RAM_RETRIES);
+  error(k30errbuf);
 }
 
 // Send a Write-EEPROM command (TDE4700 Section 5.4) to set a 1-byte value, then
