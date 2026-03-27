@@ -64,7 +64,7 @@ static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr, uint16_t &value)
   for (uint8_t i = 0; i < 4; i++)
     buf[i] = Wire.read();
 
-  if (buf[0] != 0x22)
+  if (buf[0] != 0x21)
   {
     snprintf(k30errbuf, sizeof(k30errbuf),
              "K30 readRAM 0x%04X: read incomplete, status 0x%02X", ramAddr, buf[0]);
