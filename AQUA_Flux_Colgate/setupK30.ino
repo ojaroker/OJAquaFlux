@@ -40,7 +40,7 @@ static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr, uint16_t &value)
   cmd[3] = cmd[0] + cmd[1] + cmd[2];
 
   DEBUG_PRINT(F("Sending K30 Read RAM(0x"));
-  DEBUG_PRINT(i2cAddr);
+  DEBUG_PRINT(String(i2cAddr, HEX));
   DEBUG_PRINT(F("): { "));
   Wire.beginTransmission(i2cAddr);
   for (uint8_t i = 0; i < sizeof(cmd); i++)
@@ -68,7 +68,7 @@ static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr, uint16_t &value)
   // K30 Response
   //
   // Expect 4 Bytes (Section 5.3 Read Ram)
-  //  Byte 1 - Status (0x21 "Read Complete" or 0x22 "Read Incomplete")
+  //  Byte 1 - Status (0x21 "Read Complete" or 0x20 "Read Incomplete")
   //  Byte 2-3 - Data (MSB + LSB)
   //  Byte 4 - Checksum
 
