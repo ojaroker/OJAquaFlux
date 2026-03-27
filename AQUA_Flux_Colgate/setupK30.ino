@@ -39,9 +39,18 @@ static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr, uint16_t &value)
   cmd[2] = ramAddr & 0xFF;
   cmd[3] = cmd[0] + cmd[1] + cmd[2];
 
+  DEBUG_PRINT(F("Sending K30 Read RAM(0x"));
+  DEBUG_PRINT(i2cAddr);
+  DEBUG_PRINT(F("): { "));
   Wire.beginTransmission(i2cAddr);
   for (uint8_t i = 0; i < sizeof(cmd); i++)
+  {
+    DEBUG_PRINT(String(cmd[i], HEX));
+    DEBUG_PRINT(F(" "));
     Wire.write(cmd[i]);
+  }
+  DEBUG_PRINTLN(F("}"));
+
   byte err = Wire.endTransmission();
   if (err != 0)
   {
@@ -50,9 +59,23 @@ static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr, uint16_t &value)
     error(k30errbuf);
   }
 
-  delay(20); // K30 datasheet: ≥20 ms after write before reading response
+  // The K30 datasheet specifies ≥20 ms for the sensor to finish writing
+  // the result to RAM before you read it back. The original 10 ms caused
+  // intermittent checksum failures.
+  delay(30); // K30 datasheet: ≥20 ms after write before reading response
 
-  byte received = Wire.requestFrom(i2cAddr, (uint8_t)4);
+  //
+  // K30 Response
+  //
+  // Expect 4 Bytes (Section 5.3 Read Ram)
+  //  Byte 1 - Status (0x21 "Read Complete" or 0x22 "Read Incomplete")
+  //  Byte 2-3 - Data (MSB + LSB)
+  //  Byte 4 - Checksum
+
+  // Fill wire buffer with response from K30
+  uint8_t received = Wire.requestFrom(i2cAddr, (uint8_t)4);
+
+  // Confirm we got 4 bytes back; if not, something went wrong at the I2C level.
   if (received != 4)
   {
     snprintf(k30errbuf, sizeof(k30errbuf),
@@ -60,7 +83,7 @@ static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr, uint16_t &value)
     error(k30errbuf);
   }
 
-  byte buf[4];
+  uint8_t buf[4];
   for (uint8_t i = 0; i < 4; i++)
     buf[i] = Wire.read();
 
@@ -100,10 +123,10 @@ static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr, uint16_t &value)
 static void k30WriteEEPROM(uint8_t i2cAddr, uint16_t eepromAddr, uint8_t val)
 {
   byte cmd[5];
-  cmd[0] = 0x31;                               // Write EEPROM, 1 data byte (TDE4700)
-  cmd[1] = (eepromAddr >> 8) & 0xFF;           // address MSB
-  cmd[2] = eepromAddr & 0xFF;                  // address LSB
-  cmd[3] = val;                                // data byte
+  cmd[0] = 0x31;                              // Write EEPROM, 1 data byte (TDE4700)
+  cmd[1] = (eepromAddr >> 8) & 0xFF;          // address MSB
+  cmd[2] = eepromAddr & 0xFF;                 // address LSB
+  cmd[3] = val;                               // data byte
   cmd[4] = cmd[0] + cmd[1] + cmd[2] + cmd[3]; // checksum
 
   Wire.beginTransmission(i2cAddr);
@@ -133,7 +156,7 @@ static void k30WriteEEPROM(uint8_t i2cAddr, uint16_t eepromAddr, uint8_t val)
              "K30 writeEEPROM 0x%04X: response expected 2 bytes, got %d", eepromAddr, received);
     error(k30errbuf);
   }
-  byte status   = Wire.read();
+  byte status = Wire.read();
   byte respCsum = Wire.read();
   (void)respCsum; // checksum of a single byte equals itself; no separate validation needed
   if (status != 0x31)
@@ -190,7 +213,11 @@ static bool ensureK30Address()
   k30RelayOn(0); // no extra startup delay — Arduino is already stable
   LOG_STREAM.println(F("done"));
 
-  cur = readK30I2CAddress();
+  // Use K30_I2C_ADDR directly — 0x7F after a write/reboot returns a stale
+  // Write EEPROM response (0x31) instead of a fresh Read RAM response.
+  uint16_t addrVal = 0;
+  k30ReadRAM(K30_I2C_ADDR, 0x0020, addrVal);
+  cur = (uint8_t)(addrVal & 0xFF);
   if (cur != K30_I2C_ADDR)
   { // ERROR - Address not set
     snprintf(k30errbuf, sizeof(k30errbuf),
@@ -212,13 +239,13 @@ static bool ensureK30Address()
 // Error status check
 // ---------------------------------------------------------------------------
 
-// Reads the K30 error status register (RAM 0x1E)
-// Uses 0x7F so this works regardless of the sensor's current address.
+// Reads the K30 error status register (RAM 0x1E).
+// Uses K30_I2C_ADDR — called after ensureK30Address() has confirmed the address.
 // Logs a human-readable report. Halts on any set bit (all indicate sensor fault).
 static bool checkK30ErrorStatus()
 {
   uint16_t status = 0;
-  k30ReadRAM(0x7F, 0x001E, status);
+  k30ReadRAM(K30_I2C_ADDR, 0x001E, status);
 
   LOG_STREAM.print(F("K30 error status (0x1E): 0x"));
   if (status < 0x1000)
