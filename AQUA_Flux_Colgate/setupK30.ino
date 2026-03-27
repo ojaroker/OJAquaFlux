@@ -59,9 +59,23 @@ static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr, uint16_t &value)
     error(k30errbuf);
   }
 
-  delay(20); // K30 datasheet: ≥20 ms after write before reading response
+  // The K30 datasheet specifies ≥20 ms for the sensor to finish writing
+  // the result to RAM before you read it back. The original 10 ms caused
+  // intermittent checksum failures.
+  delay(30); // K30 datasheet: ≥20 ms after write before reading response
 
-  byte received = Wire.requestFrom(i2cAddr, (uint8_t)4);
+  //
+  // K30 Response
+  //
+  // Expect 4 Bytes (Section 5.3 Read Ram)
+  //  Byte 1 - Status (0x21 "Read Complete" or 0x22 "Read Incomplete")
+  //  Byte 2-3 - Data (MSB + LSB)
+  //  Byte 4 - Checksum
+
+  // Fill wire buffer with response from K30
+  uint8_t received = Wire.requestFrom(i2cAddr, (uint8_t)4);
+
+  // Confirm we got 4 bytes back; if not, something went wrong at the I2C level.
   if (received != 4)
   {
     snprintf(k30errbuf, sizeof(k30errbuf),
@@ -69,7 +83,7 @@ static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr, uint16_t &value)
     error(k30errbuf);
   }
 
-  byte buf[4];
+  uint8_t buf[4];
   for (uint8_t i = 0; i < 4; i++)
     buf[i] = Wire.read();
 
