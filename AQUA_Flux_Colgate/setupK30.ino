@@ -48,8 +48,16 @@ static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr, uint16_t &value)
 
   for (uint8_t attempt = 0; attempt < K30_READ_RAM_RETRIES; attempt++)
   {
-    if (attempt > 0)
-      delay(K30_READ_RAM_RETRY_DELAY_MS);
+
+    // Flush the wire
+    DEBUG_PRINT(F("Flushing I2C Bus before sending Read Ram command..."));
+    while (Wire.available())
+    {
+      byte c = Wire.read();
+      DEBUG_PRINT(String(c, HEX));
+      DEBUG_PRINT(F("..."));
+    }
+    DEBUG_PRINTLN(F("DONE"));
 
     DEBUG_PRINT(F("Sending K30 Read RAM(0x"));
     DEBUG_PRINT(String(i2cAddr, HEX));
@@ -91,15 +99,22 @@ static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr, uint16_t &value)
       error(k30errbuf);
     }
 
-    uint8_t buf[4];
-    for (uint8_t i = 0; i < 4; i++)
-      buf[i] = Wire.read();
+    // Check for stray data on i2c
+    DEBUG_PRINT(F("Checking for more data on I2C Bus..."));
+    while (Wire.available())
+    {
+      byte c = Wire.read();
+      DEBUG_PRINT(String(c, HEX));
+      DEBUG_PRINT(F("..."));
+    }
+    DEBUG_PRINTLN(F("DONE"));
 
     if (buf[0] != 0x21)
     {
       DEBUG_PRINT(F("K30 readRAM unexpected status 0x"));
       DEBUG_PRINT(String(buf[0], HEX));
       DEBUG_PRINTLN(F(", retrying..."));
+      delay(K30_READ_RAM_RETRY_DELAY_MS);
       continue; // retry — K30 may return stale EEPROM response (0x31) after address change
     }
 
@@ -145,6 +160,17 @@ static void k30WriteEEPROM(uint8_t i2cAddr, uint16_t eepromAddr, uint8_t val)
   cmd[4] = cmd[0] + cmd[1] + cmd[2] + cmd[3]; // checksum
 
   Wire.beginTransmission(i2cAddr);
+
+  // Flush the wire
+  DEBUG_PRINT(F("Flushing I2C Bus before Write EEPROM command..."));
+  while (Wire.available())
+  {
+    byte c = Wire.read();
+    DEBUG_PRINT(String(c, HEX));
+    DEBUG_PRINT(F("..."));
+  }
+  DEBUG_PRINTLN(F("DONE"));
+
   DEBUG_PRINT(F("Sending K30 EEPROM write: { "));
   for (uint8_t i = 0; i < sizeof(cmd); i++)
   {
@@ -161,7 +187,7 @@ static void k30WriteEEPROM(uint8_t i2cAddr, uint16_t eepromAddr, uint8_t val)
     error(k30errbuf);
   }
 
-  delay(20); // t_WAIT: sensor commits EEPROM write during this window (TDE4700 Table 6)
+  delay(30); // t_WAIT: sensor commits EEPROM write during this window (TDE4700 Table 6)
 
   // Read 2-byte response: [status, checksum]
   byte received = Wire.requestFrom(i2cAddr, (uint8_t)2);
@@ -173,6 +199,16 @@ static void k30WriteEEPROM(uint8_t i2cAddr, uint16_t eepromAddr, uint8_t val)
   }
   byte status = Wire.read();
   byte respCsum = Wire.read();
+
+  // Check for stray data after reading expected bytes
+  DEBUG_PRINT(F("Checking for extra data on I2C Bus..."));
+  while (Wire.available())
+  {
+    byte c = Wire.read();
+    DEBUG_PRINT(String(c, HEX));
+    DEBUG_PRINT(F("..."));
+  }
+  DEBUG_PRINTLN(F("DONE"));
   (void)respCsum; // checksum of a single byte equals itself; no separate validation needed
   if (status != 0x31)
   {
