@@ -9,6 +9,8 @@ This setup logs data to SD card, transmits via XBee for remote access, controls 
 - [xBee Commands](./design_files/xbee_commands.md)
 - [Software Activity](./design_files/activity.md)
 
+## W
+
 ## Modifications to Original Design - March 2026
 
 The following software and hardware modifications were made to the original design to address issues encountered during testing and deployment.

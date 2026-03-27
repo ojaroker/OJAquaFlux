@@ -1,0 +1,6 @@
+Id	Description	Qty	Unit	Designators
+1	Cable, 5 wires	0	m	W1, W2
+2	Connector, Screw Terminal, 3 pins	1		CHAMBER_PCB
+3	Connector, Screw Terminal, 4 pins	1		LEVELSHIFTER
+4	Connector, Screw Terminal, 5 pins	1		K30
+5	Connector, Screw Terminal, 6 pins	1		K30_RELAY

@@ -190,7 +190,7 @@ void setup(void)
   printConfig();            // Shows XBee commands
   activateK30();            // Delayed K30 activation using relay
   setupI2c();               // Turns on I2C and puts it into a known starting state
-  setupK30();               // Checks K30 for errors and non-conflicting I2C address
+  // setupK30();               // Checks K30 for errors and non-conflicting I2C address
   scanI2cBus();             // Scan and report all I2C devices
   setupSht85();             // Start temp/humidity sensor
 #if USE_ACTUATOR

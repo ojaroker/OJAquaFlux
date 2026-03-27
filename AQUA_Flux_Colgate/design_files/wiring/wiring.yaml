@@ -1,0 +1,39 @@
+# Color Code: https://en.wikipedia.org/wiki/Electronic_color_code#Color_band_system
+---
+connectors:
+  K30:
+    type: Screw Terminal
+    pinlabels: [DVCC, G0, G+, I2C_SLC, I2C_SDA]
+  LEVELSHIFTER:
+    type: Screw Terminal
+    pinlabels: [LV1, HV1, LV, HV]
+  CHAMBER_PCB:
+    type: Screw Terminal
+    pinlabels: [5VDC, SDA, SCL]
+  ARDUINO:
+    type: Hat
+    pinlabels: [SDA, SCL, RELAY_CONTROL, 5VDC, GND]
+  K30_RELAY:
+    type: Screw Terminal
+    pinlabels: [5VDC, GND, SIGNAL, 'NO', COM, NC]
+
+cables:
+  W1:
+    colors: [YE, GN, RD, OG, BU]
+  W2:
+    colors: [YE, GN, RD, OG, BU]
+
+connections:
+  -
+    - K30: [1]
+    - W1: [1]
+    - LEVELSHIFTER: [3]
+  -
+    - LEVELSHIFTER: [4]
+    - W2: [1]
+    - CHAMBER_PCB: [1]
+  -
+    - K30: [1]
+    - W1: [3]
+    - K30_RELAY: [4]
+    
