@@ -2,7 +2,7 @@
 // Refactor readK30_CO2_withRetry()
 // Rename to readK30_CO2()
 // Helper function
-//  uint16_t function readK30Ram_withRetry(uint8_t i2cAddr, uint16_t ramAddr)
+//  uint16_t function readK30Ram_withRetry(uint8_t i2cAddr, uint16_t ramAddr, uint8_t readNum)
 //  return uint16_t value
 //
 
