@@ -1,3 +1,9 @@
+// TODO
+// The miscalibrated message will not appear on the first log file because
+// K30 setup occurs after the logging is configured
+// Separate the log file creation so that it occurs after K30 setup completes
+// This will put the error message into the first log file
+
 // setupLogging.ino
 //
 // Initializes all logging infrastructure at startup:
@@ -36,7 +42,16 @@ void openNextLogfile()
   if (isNewFile)
   {
     // Write header only once per file; skip on same-day reboot (append mode)
-    logfile.println(F("millis, stampunix, datetime, K30_CO2, CH4smV, Vbat, SHT_RH, SHT_temp, AQUA_Flux1"));
+    logfile.print(F("millis, stampunix, datetime, K30_CO2"));
+#if USE_K30
+    if (miscalibratedK30)
+      logfile.print(F("(**)"));
+#endif
+    logfile.println(F(", CH4smV, Vbat, SHT_RH, SHT_temp, AQUA_Flux1 "));
+#if USE_K30
+    if (miscalibratedK30)
+      logfile.println(F("** The K30 is miscalibrated, according to Error Status."));
+#endif
     logfile.flush(); // persist header immediately — first data row may not arrive for >30 s
   }
 }
