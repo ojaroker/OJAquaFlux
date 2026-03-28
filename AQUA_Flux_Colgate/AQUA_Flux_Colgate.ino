@@ -73,7 +73,10 @@ SoftwareSerial XBee(2, 3); // Arduino RX, TX (XBee Dout, Din)
 // -----------------------------------------------------------------------------
 // Address (Default: 0x68, Any Sensor: 0x7F)
 // WARNING: Changed 0x68 to 0x69 to avoid conflict with the data logger RTC
+#if USE_K30
 #define K30_I2C_ADDR 0x69
+bool miscalibratedK30 = false;
+#endif
 
 // -----------------------------------------------------------------------------
 // SHT85 Humidity and Temperature Sensor Configuration
@@ -301,10 +304,13 @@ void loop()
 
   LOG_STREAM.print(", ");
   LOG_STREAM.print(co2Value);
+  if (miscalibratedK30) LOG_STREAM.print(F("**"));
 
 #if USE_DATALOGGER
   logfile.print(", ");
   logfile.print(co2Value);
+  if (miscalibratedK30) logfile.print(F("**"));
+
 #endif
 
   // Watchdog.reset();

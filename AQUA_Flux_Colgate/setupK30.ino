@@ -355,7 +355,7 @@ static bool checkK30ErrorStatus()
   }
 
   LOG_STREAM.println(F("...K30: FAILED"));
-
+  bool isGoodK30 = false; // Terminate program only for fatal errors
   // Bit definitions
   // https://rmtplusstoragesenseair.blob.core.windows.net/docs/publicerat/PSP110.pdf
   // Page 8
@@ -384,6 +384,8 @@ static bool checkK30ErrorStatus()
     LOG_STREAM.println(F("Self-diagnostic error (bit 4) Error Code 16"));
     LOG_STREAM.println(F("  May indicate the need to zero calibration or sensor replacement"));
     LOG_STREAM.println(F("  Check detailed self-diagnostic status with software tools"));
+    isGoodK30 = true;
+    miscalibratedK30 = true;
   }
 
   if (status & 0x20)
@@ -392,6 +394,8 @@ static bool checkK30ErrorStatus()
     LOG_STREAM.println(F("  Accompanies most of the other errors. Resets automatically."));
     LOG_STREAM.println(F("  Can also indicate overload or failures of sensors and inputs."));
     LOG_STREAM.println(F("  Perform CO2 background calibration. See documentation."));
+    isGoodK30 = true;
+    miscalibratedK30 = true;
   }
 
   if (status & 0x40)
@@ -403,7 +407,7 @@ static bool checkK30ErrorStatus()
     LOG_STREAM.println(status & 0x80, HEX);
   }
 
-  return false;
+  return isGoodK30;
 }
 #endif // USE_K30
 
