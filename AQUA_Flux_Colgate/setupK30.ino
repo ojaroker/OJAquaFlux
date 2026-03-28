@@ -27,9 +27,13 @@ static char k30errbuf[64];
 // ---------------------------------------------------------------------------
 #if USE_K30
 
-// Send a Read-RAM command and return the 2-byte result in `value`.
-// NOTE: This is hard coded to read 2 byte only (command 0x22, TDE4700)
-// Uses the K30 I2C address in `i2cAddr` (pass 0x7F for "any sensor").
+// Send a Read-RAM command and write `numRead` data bytes into `outBuf` (MSB first).
+// `i2cAddr`  — sensor I2C address (pass 0x7F for "any sensor").
+// `ramAddr`  — 16-bit K30 RAM address to read.
+// `outBuf`   — caller-provided buffer; must be at least `numRead` bytes.
+// `numRead`  — number of data bytes to read (1–16); default 2.
+//              Encoded in the low nibble of the command byte (TDE4700): values
+//              1–15 map directly; 16 maps to nibble 0x0 (i.e. command 0x20).
 // Retries up to K30_READ_RAM_RETRIES times on unexpected status bytes — the K30
 // can return a stale Write EEPROM response (0x31) on the first read after an
 // address change, which clears on retry.
@@ -38,10 +42,18 @@ static char k30errbuf[64];
 #define K30_READ_RAM_RETRIES 3
 #define K30_READ_RAM_RETRY_DELAY_MS 100
 
-static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr, uint16_t &value)
+static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr,
+                       uint8_t *outBuf, uint8_t numRead = 2)
 {
+  if (numRead == 0 || numRead > 16)
+  {
+    snprintf(k30errbuf, sizeof(k30errbuf),
+             "k30ReadRAM: numRead %d out of range (1-16)", numRead);
+    error(k30errbuf);
+  }
+
   byte cmd[4];
-  cmd[0] = 0x22; // Read RAM, 2 data bytes (TDE4700)
+  cmd[0] = 0x20 | (numRead & 0x0F); // Read RAM, numRead data bytes (TDE4700)
   cmd[1] = (ramAddr >> 8) & 0xFF;
   cmd[2] = ramAddr & 0xFF;
   cmd[3] = cmd[0] + cmd[1] + cmd[2];
@@ -86,26 +98,31 @@ static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr, uint16_t &value)
     //
     // K30 Response
     //
-    // Expect 4 Bytes (Section 5.3 Read Ram)
-    //  Byte 1 - Status (0x21 "Read Complete" or 0x20 "Read Incomplete")
-    //  Byte 2-3 - Data (MSB + LSB)
-    //  Byte 4 - Checksum
+    // Expect numRead + 2 bytes (Section 5.3 Read Ram)
+    //  Byte 1         - Status (0x21 "Read Complete" or 0x20 "Read Incomplete")
+    //  Bytes 2..N+1   - Data (MSB first, numRead bytes)
+    //  Byte N+2       - Checksum (sum of all preceding bytes, truncated to 8 bits)
 
-    uint8_t received = Wire.requestFrom(i2cAddr, (uint8_t)4);
-    if (received != 4)
+    uint8_t expected = numRead + 2;
+    uint8_t received = Wire.requestFrom(i2cAddr, expected);
+    if (received != expected)
     {
       snprintf(k30errbuf, sizeof(k30errbuf),
-               "K30 readRAM 0x%04X: expected 4 bytes, got %d", ramAddr, received);
+               "K30 readRAM 0x%04X: expected %d bytes, got %d", ramAddr, expected, received);
       error(k30errbuf);
     }
 
-    DEBUG_PRINT(F("Received Data on I2C Bus..."));
-    uint8_t buf[4];
-    for (uint8_t i = 0; i < 4; i++)
+    // Read response into buf; accumulate checksum over all bytes except the last
+    uint8_t buf[18]; // status (1) + data (up to 16) + checksum (1)
+    uint8_t checksum = 0;
+    DEBUG_PRINT(F("Received Data on I2C Bus: "));
+    for (uint8_t i = 0; i < expected; i++)
     {
       buf[i] = Wire.read();
       DEBUG_PRINT(String(buf[i], HEX));
       DEBUG_PRINT(F(" "));
+      if (i < expected - 1) // accumulate all bytes except the checksum byte itself
+        checksum += buf[i];
     }
     DEBUG_PRINTLN(F("DONE"));
 
@@ -128,14 +145,15 @@ static void k30ReadRAM(uint8_t i2cAddr, uint16_t ramAddr, uint16_t &value)
       continue; // retry — K30 may return stale EEPROM response (0x31) after address change
     }
 
-    if ((byte)(buf[0] + buf[1] + buf[2]) != buf[3])
+    if (checksum != buf[expected - 1])
     {
       snprintf(k30errbuf, sizeof(k30errbuf),
                "K30 readRAM 0x%04X: checksum fail", ramAddr);
       error(k30errbuf);
     }
 
-    value = ((uint16_t)buf[1] << 8) | buf[2];
+    for (uint8_t i = 0; i < numRead; i++)
+      outBuf[i] = buf[1 + i];
     return; // success
   }
 
@@ -247,9 +265,9 @@ static void k30WriteEEPROM(uint8_t i2cAddr, uint16_t eepromAddr, uint8_t val)
 // Uses 0x7F so this works regardless of the sensor's current address.
 static uint8_t readK30I2CAddress()
 {
-  uint16_t value = 0;
-  k30ReadRAM(0x7F, 0x0020, value);
-  return (uint8_t)(value & 0xFF);
+  uint8_t buf[1] = {0};
+  k30ReadRAM(0x7F, 0x0020, buf, 1);
+  return buf[0];
 }
 
 // Verify the K30's configured address matches K30_I2C_ADDR.
@@ -292,9 +310,9 @@ static bool ensureK30Address()
 
   // Use K30_I2C_ADDR directly — 0x7F after a write/reboot returns a stale
   // Write EEPROM response (0x31) instead of a fresh Read RAM response.
-  uint16_t addrVal = 0;
-  k30ReadRAM(K30_I2C_ADDR, 0x0020, addrVal);
-  cur = (uint8_t)(addrVal & 0xFF);
+  uint8_t addrBuf[2] = {0};
+  k30ReadRAM(K30_I2C_ADDR, 0x0020, addrBuf);
+  cur = addrBuf[1]; // address is in LSB
   if (cur != K30_I2C_ADDR)
   { // ERROR - Address not set
     snprintf(k30errbuf, sizeof(k30errbuf),
@@ -321,19 +339,16 @@ static bool ensureK30Address()
 // Logs a human-readable report. Halts on any set bit (all indicate sensor fault).
 static bool checkK30ErrorStatus()
 {
-  uint16_t status = 0;
-  k30ReadRAM(K30_I2C_ADDR, 0x001E, status);
+  uint8_t statusBuf[1] = {0};
+  k30ReadRAM(K30_I2C_ADDR, 0x001E, statusBuf, 1);
+  uint8_t status = statusBuf[0];
 
   LOG_STREAM.print(F("K30 error status (0x1E): 0x"));
-  if (status < 0x1000)
-    LOG_STREAM.print(F("0"));
-  if (status < 0x0100)
-    LOG_STREAM.print(F("0"));
-  if (status < 0x0010)
+  if (status < 0x10)
     LOG_STREAM.print(F("0"));
   LOG_STREAM.print(status, HEX);
 
-  if (status == 0x0000)
+  if (status == 0x00)
   {
     LOG_STREAM.println(F("...K30: OK"));
     return true;
@@ -344,34 +359,34 @@ static bool checkK30ErrorStatus()
   // Bit definitions
   // https://rmtplusstoragesenseair.blob.core.windows.net/docs/publicerat/PSP110.pdf
   // Page 8
-  if (status & 0x0001)
+  if (status & 0x01)
     LOG_STREAM.println(F("Fatal error (bit 0) Error Code 1"));
 
-  if (status & 0x0002)
+  if (status & 0x02)
     LOG_STREAM.println(F("Offset regulation error (bit 1) Error Code 2"));
 
-  if (status & 0x0004)
+  if (status & 0x04)
   {
     LOG_STREAM.println(F("Algorithm error (bit 2) Error Code 4"));
     LOG_STREAM.println(F("  Indicates wrong EEPROM configuration"));
     LOG_STREAM.println(F("  Check settings & reconfigure with software tools"));
   }
 
-  if (status & 0x0008)
+  if (status & 0x08)
   {
     LOG_STREAM.println(F("Output error (bit 3) Error Code 8"));
     LOG_STREAM.println(F("  Detected errors during output signals calculation & generation"));
     LOG_STREAM.println(F("  Check connections & loads of outputs"));
   }
 
-  if (status & 0x0010)
+  if (status & 0x10)
   {
     LOG_STREAM.println(F("Self-diagnostic error (bit 4) Error Code 16"));
     LOG_STREAM.println(F("  May indicate the need to zero calibration or sensor replacement"));
     LOG_STREAM.println(F("  Check detailed self-diagnostic status with software tools"));
   }
 
-  if (status & 0x0020)
+  if (status & 0x20)
   {
     LOG_STREAM.println(F("Out of range (bit 5) Error Code 32"));
     LOG_STREAM.println(F("  Accompanies most of the other errors. Resets automatically."));
@@ -379,13 +394,13 @@ static bool checkK30ErrorStatus()
     LOG_STREAM.println(F("  Perform CO2 background calibration. See documentation."));
   }
 
-  if (status & 0x0040)
+  if (status & 0x40)
     LOG_STREAM.println(F("Memory error (bit 6) Error Code 64"));
 
-  if (status & 0xFF80)
+  if (status & 0x80)
   {
-    LOG_STREAM.print(F("Reserved: unknown flags 0x"));
-    LOG_STREAM.println(status & 0xFF80, HEX);
+    LOG_STREAM.print(F("Reserved: unknown flag (bit 7) 0x"));
+    LOG_STREAM.println(status & 0x80, HEX);
   }
 
   return false;

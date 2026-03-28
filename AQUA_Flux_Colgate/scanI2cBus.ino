@@ -4,15 +4,15 @@ void scanI2cBus()
   for (byte address = 1; address < 127; address++)
   {
     Wire.beginTransmission(address);
-    byte error = Wire.endTransmission();
-    if (error == 0)
+    byte txStatus = Wire.endTransmission();
+    if (txStatus == 0)
     {
       LOG_STREAM.print(F("I2C device found at address 0x"));
       if (address < 16)
         LOG_STREAM.print(F("0"));
       LOG_STREAM.println(address, HEX);
     }
-    else if (error == 4)
+    else if (txStatus == 4)
     {
       LOG_STREAM.print(F("Unknown error at address 0x"));
       if (address < 16)
